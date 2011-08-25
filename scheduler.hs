@@ -1,0 +1,63 @@
+
+import Data.Map
+import qualified Data.List as L
+
+
+data Quadrature =  Real | Imaginary  deriving (Show, Eq, Ord, Enum, Bounded, Read)
+
+
+data Point = Point [(Integer, Quadrature)]  deriving  (Show, Eq, Ord)
+
+pointDims :: (Integral t) => Point -> t
+pointDims (Point ds) = L.genericLength ds
+
+
+data Schedule = Schedule {numDimensions :: Integer,
+			  points :: Map Point Integer}  deriving (Show, Eq)
+
+addPoint :: Schedule -> Point -> Schedule
+addPoint (Schedule d pts) pt
+	| d /= pointDims pt = error "bad number of dimensions in point"
+	| otherwise = Schedule d $ insert pt trans pts
+		where
+			trans = 1 + (extract $ Data.Map.lookup pt pts)
+			extract Nothing = 0
+			extract (Just x) = x
+
+addPointTrans :: Schedule -> Point -> Integer -> Schedule
+addPointTrans sched pt trans = foldl addPoint sched points
+	where
+		points = L.genericTake trans $ repeat pt
+
+addSchedules :: Schedule -> Schedule -> Schedule
+addSchedules osched (Schedule d pts) = foldl adder osched $ toList pts
+	where
+		adder s (pt, trans) = addPointTrans s pt trans
+
+
+example = Schedule {numDimensions = 2, points = fromList [(Point [(3,Real),(3,Imaginary)],2),(Point [(3,Real),(4,Real)],1)]}
+
+
+-------------------------------------------------
+class SchedulePrint a where
+	sprint :: a -> String
+
+instance SchedulePrint Quadrature where
+	sprint Real = "R"
+	sprint _ = "I"
+
+instance SchedulePrint Schedule where
+	sprint (Schedule _ pts) = foldr comb "" $ (fmap fst $ toList pts)
+		where
+			comb pt base = (sprint pt) ++ base
+
+instance SchedulePrint Point where
+	sprint (Point loc) = concat [coordinates, " ", quadrature, "\n"]
+		where
+			coordinates = join " " $ fmap (show . fst) loc
+			quadrature = concat $ fmap (sprint . snd) loc
+
+join :: String -> [String] -> String
+join between strings = foldr1 func strings
+	where
+		func n b = concat [n, between, b]
