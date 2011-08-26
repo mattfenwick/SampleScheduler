@@ -37,6 +37,8 @@ addSchedules osched (Schedule d pts) = foldl adder osched $ toList pts
 example = Schedule {numDimensions = 2, points = fromList [(Point [(3,Real),(3,Imaginary)],2),
 	(Point [(3,Real),(4,Real)],1)]}
 
+example2 = addSchedules example example
+
 
 -------------------------------------------------
 class SchedulePrint a where
@@ -47,27 +49,22 @@ instance SchedulePrint Quadrature where
 	sprint _ = "I"
 
 instance SchedulePrint Schedule where
-	sprint (Schedule _ pts) = foldr comb "" $ (fmap fst $ toList pts)
+	sprint (Schedule _ pts) = foldr comb "" $ toList pts
 		where
-			comb pt base = (sprint pt) ++ base
+			comb (pt, t) base = concat [sprint pt, " ", show t, "\n", base]
 
 instance SchedulePrint Point where
-	sprint (Point loc) = concat [coordinates, " ", quadrature, "\n"]
+	sprint (Point loc) = concat [coordinates, " ", quadrature]
 		where
-			coordinates = join " " $ fmap (show . fst) loc
+			coordinates = concat $ L.intersperse " " $ fmap (show . fst) loc
 			quadrature = concat $ fmap (sprint . snd) loc
-
-join :: String -> [String] -> String
-join between strings = foldr1 func strings
-  where
-    func n b = concat [n, between, b]
 
 -----------------------------------------------------
 -- need to import Control.Applicative
-uniformGrid2d :: (Enum t) => (t, t) -> (t, t) -> [[t]]
-uniformGrid2d (xl, xh) (yl, yh) = liftA3 (\x y z -> x : y : z) [xl .. xh] [yl .. yh] [[]]
+--uniformGrid2d :: (Enum t) => (t, t) -> (t, t) -> [[t]]
+--uniformGrid2d (xl, xh) (yl, yh) = liftA3 (\x y z -> x : y : z) [xl .. xh] [yl .. yh] [[]]
 
-uniformSchedule2d :: Schedule
-uniformSchedule2d = ???
+--uniformSchedule2d :: Schedule
+--uniformSchedule2d = ???
 
 
