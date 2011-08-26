@@ -1,70 +1,13 @@
-import Data.Map
-import qualified Data.List as L
+import Model
+import Control.Applicative
 
 
-data Quadrature =  Real | Imaginary  deriving (Show, Eq, Ord, Enum, Bounded, Read)
+uniformGrid2d :: (Enum t) => (t, t) -> (t, t) -> [[t]]
+uniformGrid2d (xl, xh) (yl, yh) = liftA3 (\x y z -> x : y : z) [xl .. xh] [yl .. yh] [[]]
 
-
-data Point = Point [(Integer, Quadrature)]  deriving  (Show, Eq, Ord)
-
-pointDims :: (Integral t) => Point -> t
-pointDims (Point ds) = L.genericLength ds
-
-
-data Schedule = Schedule {numDimensions :: Integer,
-			  points :: Map Point Integer}  deriving (Show, Eq)
-
-addPoint :: Schedule -> Point -> Schedule
-addPoint (Schedule d pts) pt
-	| d /= pointDims pt = error "bad number of dimensions in point"
-	| otherwise = Schedule d $ insert pt trans pts
-		where
-			trans = 1 + (extract $ Data.Map.lookup pt pts)
-			extract Nothing = 0
-			extract (Just x) = x
-
-addPointTrans :: Schedule -> Point -> Integer -> Schedule
-addPointTrans sched pt trans = foldl addPoint sched points
+uniformSchedule2d :: Schedule
+uniformSchedule2d = foldl addPoint (Schedule 2 $ fromList []) [makePoint cs | cs <- uniformGrid2d (1, 10) (1,5)]
 	where
-		points = L.genericTake trans $ repeat pt
-
-addSchedules :: Schedule -> Schedule -> Schedule
-addSchedules osched (Schedule d pts) = foldl adder osched $ toList pts
-	where
-		adder s (pt, trans) = addPointTrans s pt trans
-
-
-example = Schedule {numDimensions = 2, points = fromList [(Point [(3,Real),(3,Imaginary)],2),
-	(Point [(3,Real),(4,Real)],1)]}
-
-example2 = addSchedules example example
-
-
--------------------------------------------------
-class SchedulePrint a where
-	sprint :: a -> String
-
-instance SchedulePrint Quadrature where
-	sprint Real = "R"
-	sprint _ = "I"
-
-instance SchedulePrint Schedule where
-	sprint (Schedule _ pts) = foldr comb "" $ toList pts
-		where
-			comb (pt, t) base = concat [sprint pt, " ", show t, "\n", base]
-
-instance SchedulePrint Point where
-	sprint (Point loc) = concat [coordinates, " ", quadrature]
-		where
-			coordinates = concat $ L.intersperse " " $ fmap (show . fst) loc
-			quadrature = concat $ fmap (sprint . snd) loc
-
------------------------------------------------------
--- need to import Control.Applicative
---uniformGrid2d :: (Enum t) => (t, t) -> (t, t) -> [[t]]
---uniformGrid2d (xl, xh) (yl, yh) = liftA3 (\x y z -> x : y : z) [xl .. xh] [yl .. yh] [[]]
-
---uniformSchedule2d :: Schedule
---uniformSchedule2d = ???
+		makePoint (x:y:_) = Point [(x, Real), (y, Real)]
 
 
