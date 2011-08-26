@@ -1,4 +1,3 @@
-
 import Data.Map
 import qualified Data.List as L
 
@@ -35,7 +34,8 @@ addSchedules osched (Schedule d pts) = foldl adder osched $ toList pts
 		adder s (pt, trans) = addPointTrans s pt trans
 
 
-example = Schedule {numDimensions = 2, points = fromList [(Point [(3,Real),(3,Imaginary)],2),(Point [(3,Real),(4,Real)],1)]}
+example = Schedule {numDimensions = 2, points = fromList [(Point [(3,Real),(3,Imaginary)],2),
+	(Point [(3,Real),(4,Real)],1)]}
 
 
 -------------------------------------------------
@@ -59,5 +59,15 @@ instance SchedulePrint Point where
 
 join :: String -> [String] -> String
 join between strings = foldr1 func strings
-	where
-		func n b = concat [n, between, b]
+  where
+    func n b = concat [n, between, b]
+
+-----------------------------------------------------
+-- need to import Control.Applicative
+uniformGrid2d :: (Enum t) => (t, t) -> (t, t) -> [[t]]
+uniformGrid2d (xl, xh) (yl, yh) = liftA3 (\x y z -> x : y : z) [xl .. xh] [yl .. yh] [[]]
+
+uniformSchedule2d :: Schedule
+uniformSchedule2d = ???
+
+
