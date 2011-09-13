@@ -1,7 +1,8 @@
 import Model
 import Quadrature
 import GridPoints
-
+import Selector
+import Modifier
 
 
 --------------------------------------------------
@@ -22,6 +23,16 @@ crazySched bounds = addManySchedules $ map (flip makeSchedule justReals) [low, f
     low = allLowerBounds bounds
     fp = firstPoint bounds
     lp = lastPoint bounds
+
+realSched = makeSchedule (uniformGrid [(1,8), (1,8)]) justReals
+
+filtered = randomPoints 45 17 uniformS2d
+
+filtered2 = dimProb product 10 uniformS2d
+
+filtered3 = dimProbsInd (\x -> 1 / (fromInteger x)) 10 realSched
+
+blur1 = blurred 2 17 realSched
 
 --------------------------------------------------
 

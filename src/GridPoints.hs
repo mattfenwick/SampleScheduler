@@ -29,3 +29,10 @@ firstPoint bounds = [map fst bounds]
 
 lastPoint :: (Integral t) => [(t, t)] -> [[t]]
 lastPoint bounds = [map snd bounds]
+
+--concentricShell :: (Integral t, Num t1) => [(t,t)] -> t1 -> t1 [[t]]
+--concentricShell bounds spacing maxdev = filter close $ uniformGrid bounds
+--  where
+--    close coord = mydist <= maxdev
+--    mydist = abs (ratio - (floor ratio)) * spacing
+--   ratio = 

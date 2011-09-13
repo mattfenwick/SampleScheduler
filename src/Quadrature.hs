@@ -31,7 +31,7 @@ singleRandom sd pts = fmap (fmap (\r -> quads !! r)) gps_rands		-- pretty ugly (
   where
     gps_rands = zip pts randnums		-- pair a gridpoint with a random number
     randnums = map (flip mod (length quads) . abs) $ R.randoms (R.mkStdGen sd)		-- generate random numbers which can be used as indexes into 'quads'
-    quads = allphases (head pts)			-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
+    quads = allphases (head pts)		-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
 
 --------------------------------------------------
 

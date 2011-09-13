@@ -8,14 +8,17 @@ module Model (
 	makeSchedule, 
 	addManySchedules, 
 	Phase,
-	GridPoint
+	GridPoint,
+	addPointTrans, 	-- ??? not really comfortable with this being visible
+	gridPoint, 	-- just for testing
+	points		-- just for testing
 ) where
 
 import qualified Data.Map as M
 import qualified Data.List as L
 
---------------------------------------------------
 
+--------------------------------------------------
 
 data Quadrature =  R | I  deriving (Show, Eq, Ord, Enum, Bounded, Read)
 
@@ -82,8 +85,8 @@ example = Schedule {numDimensions = 2, points = M.fromList [(Point [3,3] [R, I],
 
 example2 = addTwoSchedules example example
 
-
 -------------------------------------------------
+
 class SchedulePrint a where
 	sprint :: a -> String
 
