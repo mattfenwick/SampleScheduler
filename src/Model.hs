@@ -1,13 +1,14 @@
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
+
 module Model (
 	Schedule(Schedule), 
-	example2, 
 	sprint, 
 	Quadrature(R, I), 
 	Point(Point), 
 	addPoint, 
 	makeSchedule, 
 	addManySchedules, 
-	Phase,
+	QuadUnit,
 	GridPoint,
 	addPointTrans, 	-- ??? not really comfortable with this being visible
 	gridPoint, 	-- just for testing
@@ -24,10 +25,10 @@ data Quadrature =  R | I  deriving (Show, Eq, Ord, Enum, Bounded, Read)
 
 type GridPoint = [Integer]
 
-type Phase = [Quadrature]
+type QuadUnit = [Quadrature]
 
 data Point = Point { gridPoint :: GridPoint, 
-			phase :: Phase }  deriving  (Show, Eq, Ord)
+			quadUnit :: QuadUnit }  deriving  (Show, Eq, Ord)
 
 data Schedule = Schedule {numDimensions :: Integer,
 			  points :: M.Map Point Integer}  deriving (Show, Eq)
@@ -37,10 +38,10 @@ data Schedule = Schedule {numDimensions :: Integer,
 pointDims :: (Integral t) => Point -> t
 pointDims (Point gp _) = L.genericLength gp
 
-makePoint :: GridPoint -> Phase -> Point
+makePoint :: GridPoint -> QuadUnit -> Point
 makePoint gp ph
 	| length gp == length ph = Point gp ph
-	| otherwise = error ("gridpoint and phase dimensions don't match -- gp" ++ show (length gp) ++", phase " ++ show (length ph))
+	| otherwise = error ("gridpoint and quadUnit dimensions don't match -- gp" ++ show (length gp) ++", quadUnit " ++ show (length ph))
 
 --------------------------------------------------
 
@@ -71,7 +72,7 @@ addManySchedules (s:scheds) = foldl addTwoSchedules s scheds
 --	all GridPoints have the same dimensionality (as each other)
 --	the quadrature generator produces quads of the same dimensionality (as the GridPoints)
 --	there is at least one grid point (this is used to define the dimensionality)
-makeSchedule :: [GridPoint] ->  ([GridPoint] -> [(GridPoint, Phase)])  -> Schedule
+makeSchedule :: [GridPoint] ->  ([GridPoint] -> [(GridPoint, QuadUnit)])  -> Schedule
 makeSchedule gps quadgen = Schedule (L.genericLength $ head gps) $ M.fromList pointtrans
 	where
 		pointtrans = fmap (\x -> (x, 1)) quadpoints	-- generate transients for each quadrature point
@@ -80,26 +81,24 @@ makeSchedule gps quadgen = Schedule (L.genericLength $ head gps) $ M.fromList po
 
 --------------------------------------------------
 
-example = Schedule {numDimensions = 2, points = M.fromList [(Point [3,3] [R, I], 2),
-	(Point [3,4] [R, R], 1)]}
-
-example2 = addTwoSchedules example example
-
--------------------------------------------------
-
 class SchedulePrint a where
-	sprint :: a -> String
+  sprint :: a -> String
+  -- tojson :: a -> JSObject or something??
 
 instance SchedulePrint Quadrature where
-	sprint = show
+  sprint = show
 
-instance SchedulePrint Schedule where
-	sprint (Schedule _ pts) = foldr comb "" $ M.toList pts
-		where
-			comb (pt, t) base = concat [sprint pt, " ", show t, "\n", base]
+instance SchedulePrint GridPoint where
+  sprint = concat  .  L.intersperse " "  .  fmap show
+
+instance SchedulePrint QuadUnit where
+  sprint = concat . fmap sprint
 
 instance SchedulePrint Point where
-	sprint (Point loc phase) = concat [coordinates, " ", quadrature]
-		where
-			coordinates = concat $ L.intersperse " " $ fmap show loc
-			quadrature = concat $ fmap sprint phase
+  sprint (Point coords quadUnit) = concat [sprint coords, " ", sprint quadUnit]
+
+instance SchedulePrint Schedule where
+  sprint (Schedule _ pts) = foldr comb "" $ M.toList pts
+    where
+      comb (pt, t) base = concat [sprint pt, " ", show t, "\n", base]
+

@@ -3,6 +3,7 @@ import Quadrature
 import GridPoints
 import Selector
 import Modifier
+import Formatter
 
 
 --------------------------------------------------
@@ -10,10 +11,10 @@ import Modifier
 --------------------------------------------------
 
 uniformSchedule2d :: Schedule
-uniformSchedule2d = makeSchedule (uniformGrid [(3, 8), (1,5)]) allPhases
+uniformSchedule2d = makeSchedule (uniformGrid [(3, 8), (1,5)]) allQuadUnits
 
 uniformS2d :: Schedule
-uniformS2d = makeSchedule (uniformGrid [(3, 8), (1,5)]) allPhases
+uniformS2d = makeSchedule (uniformGrid [(3, 8), (1,5)]) allQuadUnits
 
 uniformS3d :: Schedule
 uniformS3d = makeSchedule (uniformGrid [(1,2), (3,4), (5,6)]) justReals

@@ -1,5 +1,5 @@
 module Quadrature (
-	allPhases,
+	allQuadUnits,
 	justReals,
 	singleRandom
 )  where
@@ -11,14 +11,14 @@ import qualified Random as R
 
 
 
-allPhases = ctxtFreeQuad allphases
+allQuadUnits = ctxtFreeQuad allquadunits
 
 justReals = ctxtFreeQuad justreals
 
 
 --------------------------------------------------
 
-ctxtFreeQuad :: (GridPoint -> [Phase]) -> [GridPoint] -> [(GridPoint, Phase)]
+ctxtFreeQuad :: (GridPoint -> [QuadUnit]) -> [GridPoint] -> [(GridPoint, QuadUnit)]
 ctxtFreeQuad qfunc gpoints = concat $ map someFunc gpoints -- someFunc gets a gridpt, and produces a list of tuples
   where
     someFunc gp = map ((,) gp) $ qfunc gp
@@ -26,25 +26,25 @@ ctxtFreeQuad qfunc gpoints = concat $ map someFunc gpoints -- someFunc gets a gr
 --------------------------------------------------
 
 -- the state needs to be maintained over the various invocations for each point
-singleRandom :: Int -> [GridPoint] -> [(GridPoint, Phase)]
+singleRandom :: Int -> [GridPoint] -> [(GridPoint, QuadUnit)]
 singleRandom sd pts = fmap (fmap (\r -> quads !! r)) gps_rands		-- pretty ugly (fmap fmap)
   where
     gps_rands = zip pts randnums		-- pair a gridpoint with a random number
     randnums = map (flip mod (length quads) . abs) $ R.randoms (R.mkStdGen sd)		-- generate random numbers which can be used as indexes into 'quads'
-    quads = allphases (head pts)		-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
+    quads = allquadunits (head pts)		-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
 
 --------------------------------------------------
 
-allphases :: GridPoint -> [Phase]
-allphases pt = sequence $ take (length pt) $ repeat [R, I]
+allquadunits :: GridPoint -> [QuadUnit]
+allquadunits pt = sequence $ take (length pt) $ repeat [R, I]
 
-justreals :: GridPoint -> [Phase]
+justreals :: GridPoint -> [QuadUnit]
 justreals pt = [take (length pt) $ repeat R]
 
 --------------------------------------------------
 -- unused:
 --twoquads2d = ctxtFreeQuad twoquads2dp
 
---twoquads2dp :: GridPoint -> [Phase]
+--twoquads2dp :: GridPoint -> [QuadUnit]
 --twoquads2dp _ = [[R, I], [I, R]]
 
