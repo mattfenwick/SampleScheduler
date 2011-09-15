@@ -50,5 +50,5 @@ sched_eg = makeSchedule gridPoints justReals
 
 printit :: Schedule -> IO ()
 printit s = do
-	putStr $ sprint s
+	putStr $ custom s
 	return ()

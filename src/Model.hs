@@ -1,8 +1,5 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
-
 module Model (
 	Schedule(Schedule), 
-	sprint, 
 	Quadrature(R, I), 
 	Point(Point), 
 	addPoint, 
@@ -12,7 +9,8 @@ module Model (
 	GridPoint,
 	addPointTrans, 	-- ??? not really comfortable with this being visible
 	gridPoint, 	-- just for testing
-	points		-- just for testing
+	points,		-- just for testing
+	quadUnit	-- just for testing??
 ) where
 
 import qualified Data.Map as M
@@ -78,27 +76,3 @@ makeSchedule gps quadgen = Schedule (L.genericLength $ head gps) $ M.fromList po
 		pointtrans = fmap (\x -> (x, 1)) quadpoints	-- generate transients for each quadrature point
 		quadpoints = map (uncurry makePoint) quad_gps
 		quad_gps = quadgen gps
-
---------------------------------------------------
-
-class SchedulePrint a where
-  sprint :: a -> String
-  -- tojson :: a -> JSObject or something??
-
-instance SchedulePrint Quadrature where
-  sprint = show
-
-instance SchedulePrint GridPoint where
-  sprint = concat  .  L.intersperse " "  .  fmap show
-
-instance SchedulePrint QuadUnit where
-  sprint = concat . fmap sprint
-
-instance SchedulePrint Point where
-  sprint (Point coords quadUnit) = concat [sprint coords, " ", sprint quadUnit]
-
-instance SchedulePrint Schedule where
-  sprint (Schedule _ pts) = foldr comb "" $ M.toList pts
-    where
-      comb (pt, t) base = concat [sprint pt, " ", show t, "\n", base]
-
