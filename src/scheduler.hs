@@ -27,7 +27,7 @@ crazySched bounds = addManySchedules $ map (flip makeSchedule justReals) [low, f
 
 realSched = makeSchedule (uniformGrid [(1,8), (1,8)]) justReals
 
-filtered = randomPoints 45 17 uniformS2d
+filtered = randomPoints 45 10007 uniformS2d
 
 filtered2 = dimProb product 10 uniformS2d
 

@@ -56,6 +56,11 @@ custom = sprint
 json :: Schedule -> String
 json = show . toJson
 
+
+-- one transient per line; like varian format except that points may be repeated (to indicate multiple transients)
+separateTransients :: Schedule -> String
+separateTransients = ???
+
 -------------------------------------------------
 
 toJson :: Schedule -> R.JsonData
