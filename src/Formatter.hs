@@ -5,7 +5,8 @@ module Formatter (
 	bruker,
 	custom,
 	json,
-	toolkit
+	toolkit,
+	separateTransients
 ) where
 
 
@@ -18,16 +19,18 @@ import qualified Text.RJson as R
 
 
 -- ignore the number of transients; one coordinates/quadunit per line
+-- 0-indexed
 varian :: Schedule -> String
-varian (Schedule _ pts) = foldr addNewline "" formattedPts
+varian (Schedule _ pts) = concat $ L.intersperse "\n" formattedPts
   where
-    formattedPts = map (sprint . fst) $ M.toList pts
-    addNewline b n = concat [b, "\n", n]
+    formattedPts = map (sprint . decrementCoordinates . fst) $ M.toList pts
+    decrementCoordinates (Point gp qus) = Point (map (flip (-) 1) gp) qus
 
 
 -- ignore quadrature, transients; print out unique coordinates; one number per line
+-- 1-indexed
 bruker :: Schedule -> String
-bruker (Schedule _ pts) = foldr (++) "" $ L.intersperse "\n" coordinates
+bruker (Schedule _ pts) = concat $ L.intersperse "\n" coordinates
   where
     coordinates = concat $ map (map show) uniquePoints 
     uniquePoints = S.toList $ S.fromList $ map (gridPoint . fst) $ M.toList pts
@@ -36,6 +39,7 @@ bruker (Schedule _ pts) = foldr (++) "" $ L.intersperse "\n" coordinates
 -- ignore transients; all quadunits of a coordinates in one line
 -- this may be the worst code I've ever seen; please PLEASE !!PLEASE!! refactor soon 
 -- the comments are bad, too
+-- 1-indexed
 toolkit :: Schedule -> String
 toolkit (Schedule _ pts) = concat $ L.intersperse "\n" formattedLines
   where
@@ -49,17 +53,23 @@ toolkit (Schedule _ pts) = concat $ L.intersperse "\n" formattedLines
 
 
 -- one coordinates/quadunit per line
+-- 1-indexed
 custom :: Schedule -> String
 custom = sprint
 
 
+-- 1-indexed
 json :: Schedule -> String
 json = show . toJson
 
 
 -- one transient per line; like varian format except that points may be repeated (to indicate multiple transients)
+-- 1-indexed
 separateTransients :: Schedule -> String
-separateTransients = ???
+separateTransients (Schedule _ pts) = concat $ L.intersperse "\n" transLine
+  where
+    transLine = fmap (\(Point gp qus) -> concat $ L.intersperse " " [sprint gp, sprint qus]) transPoints -- most of the lambda function is stolen from the 'toolkit' function :  so refactor 
+    transPoints = concat [L.genericTake t $ repeat p | (p, t) <- M.toList pts]
 
 -------------------------------------------------
 
