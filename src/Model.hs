@@ -2,7 +2,6 @@ module Model (
 	Schedule(Schedule), 
 	Quadrature(R, I), 
 	Point(Point), 
-	addPoint, 
 	makeSchedule, 
 	addManySchedules, 
 	QuadUnit,
@@ -43,6 +42,11 @@ makePoint gp ph
 
 --------------------------------------------------
 
+addPointTrans :: Schedule -> Point -> Integer -> Schedule
+addPointTrans sched pt trans = foldl addPoint sched points
+	where
+		points = L.genericTake trans $ repeat pt
+
 addPoint :: Schedule -> Point -> Schedule
 addPoint (Schedule d pts) pt
 	| d /= pointDims pt = error ("bad number of dimensions in point -- wanted " ++ show d ++ ", got " ++ show (pointDims pt))
@@ -51,20 +55,6 @@ addPoint (Schedule d pts) pt
 			trans = 1 + (extract $ M.lookup pt pts)
 			extract Nothing = 0
 			extract (Just x) = x
-
-addPointTrans :: Schedule -> Point -> Integer -> Schedule
-addPointTrans sched pt trans = foldl addPoint sched points
-	where
-		points = L.genericTake trans $ repeat pt
-
-addTwoSchedules :: Schedule -> Schedule -> Schedule
-addTwoSchedules osched (Schedule d pts) = foldl adder osched $ M.toList pts
-	where
-		adder s (pt, trans) = addPointTrans s pt trans
-
--- this is a partial function!  what if the list is empty???
-addManySchedules :: [Schedule] -> Schedule
-addManySchedules (s:scheds) = foldl addTwoSchedules s scheds
 
 -- assumptions:
 --	all GridPoints have the same dimensionality (as each other)
@@ -76,3 +66,13 @@ makeSchedule gps quadgen = Schedule (L.genericLength $ head gps) $ M.fromList po
 		pointtrans = fmap (\x -> (x, 1)) quadpoints	-- generate transients for each quadrature point
 		quadpoints = map (uncurry makePoint) quad_gps
 		quad_gps = quadgen gps
+
+addTwoSchedules :: Schedule -> Schedule -> Schedule
+addTwoSchedules osched (Schedule d pts) = foldl adder osched $ M.toList pts
+	where
+		adder s (pt, trans) = addPointTrans s pt trans
+
+-- this is a partial function!  what if the list is empty???
+addManySchedules :: [Schedule] -> Schedule
+addManySchedules (s:scheds) = foldl addTwoSchedules s scheds
+

@@ -29,7 +29,7 @@ realSched = makeSchedule (uniformGrid [(1,8), (1,8)]) justReals
 
 filtered = randomPoints 45 10007 uniformS2d
 
-filtered2 = dimProb product 10 uniformS2d
+filtered2 = bestByGridPoint product 10 uniformS2d
 
 filtered3 = dimProbsInd (\x -> 1 / (fromInteger x)) 10 realSched
 

@@ -18,13 +18,6 @@ justReals = ctxtFreeQuad justreals
 
 --------------------------------------------------
 
-ctxtFreeQuad :: (GridPoint -> [QuadUnit]) -> [GridPoint] -> [(GridPoint, QuadUnit)]
-ctxtFreeQuad qfunc gpoints = concat $ map someFunc gpoints -- someFunc gets a gridpt, and produces a list of tuples
-  where
-    someFunc gp = map ((,) gp) $ qfunc gp
-
---------------------------------------------------
-
 -- the state needs to be maintained over the various invocations for each point
 singleRandom :: Int -> [GridPoint] -> [(GridPoint, QuadUnit)]
 singleRandom sd pts = fmap (fmap (\r -> quads !! r)) gps_rands		-- pretty ugly (fmap fmap)
@@ -34,6 +27,13 @@ singleRandom sd pts = fmap (fmap (\r -> quads !! r)) gps_rands		-- pretty ugly (
     quads = allquadunits (head pts)		-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
 
 --------------------------------------------------
+
+ctxtFreeQuad :: (GridPoint -> [QuadUnit]) -> [GridPoint] -> [(GridPoint, QuadUnit)]
+ctxtFreeQuad qfunc gpoints = concat $ map someFunc gpoints -- someFunc gets a gridpt, and produces a list of tuples
+  where
+    someFunc gp = map ((,) gp) $ qfunc gp
+
+----------------
 
 allquadunits :: GridPoint -> [QuadUnit]
 allquadunits pt = sequence $ take (length pt) $ repeat [R, I]
