@@ -4,7 +4,8 @@ module Selector (
 	randomPointsAllQuadUnits,
 	bestByGridPointAllQuadUnits,
 	probByGridPoint,
-	dimProbsInd
+	dimProbsInd,
+	example1
 ) where
 
 import Model
@@ -21,13 +22,11 @@ import qualified Data.Function as F
 --	what if the schedule has fewer than n points?           current answer: then all points are selected
 --	are transients of a point selected individually?        current answer: no, this selects (Point, transient) pairs as a group
 --	are the Int's in the type signature bad?                current answer: leave them for now, refactor to Integral/Integer if necessary later
---	can points be selecte multiple times?			current answer: no 
+--	can points be selected multiple times?			current answer: no 
 randomPoints :: Int -> Int -> Schedule -> Schedule
 randomPoints number seed (Schedule d pts) = Schedule d $ M.fromList filteredPts
   where
-    filteredPts = map fst $ selectBest number snd ratedPoints
-    ratedPoints = zip (M.toList pts) randomNums
-    randomNums = R.randoms (R.mkStdGen seed) :: [Double]
+    filteredPts = selectRandomly number seed (M.toList pts)
 
 
 -- select n points, using a weighting function
@@ -66,7 +65,7 @@ bestByGridPointAllQuadUnits f number (Schedule d pts) = Schedule d pointMap
 -- put all the points on an equal footing again, and place them back in a map
     selectedPts = selectBest number (f . gridPoint . fst . head) groupedPts  
 -- select those groups of points based on the function
-    groupedPts = L.groupBy (F.on (==) (gridPoint . fst)) $ M.toList pts  
+    groupedPts = L.groupBy (F.on (==) (gridPoint . fst)) $ M.toList pts  		-- is this a problem because it's not sorted?  or does M.toList sort things?
 -- group (Point, transients) together based solely on (gridPoint pt) :: [[(Point, Integer)]]
 
 randomPointsAllQuadUnits :: Int -> Int -> Schedule -> Schedule
@@ -83,6 +82,13 @@ randomPointsAllQuadUnits number seed (Schedule d pts) = Schedule d pointMap
 -- apply a function to each element, and select the n elements with the best scores
 selectBest :: (Ord b) => Int -> (a -> b) -> [a] -> [a]
 selectBest num f = take num . reverse . L.sortBy (O.comparing f)
+
+
+selectRandomly :: Int -> Int -> [a] -> [a]
+selectRandomly number seed things = map fst $ selectBest number snd ratedPoints
+  where
+    ratedPoints = zip things randomNums
+    randomNums = R.randoms (R.mkStdGen seed) :: [Double]
 
 
 -- perform selection with replacement
@@ -111,3 +117,45 @@ probabilitySelection seed num f orig = pickedPts
 -- if the random number is less than the sum, pick that point
 -- otherwise, continue with the next (sum, point) pair
 
+------------------------------------------------------------------------------------------------
+-- general framework for selection, bringing together grouped quadunit selection, selection method (best vs. probability)
+-- 	to-do:  fold in individual transient selection
+
+data Grouper a = Grouper { grouper :: ([(Point, Integer)] -> [a]),
+			ungrouper :: ([a] -> [(Point, Integer)])}
+
+-- strategy:
+--	strip off Schedule, Map contexts
+--	1) group points in some way
+--	2) select some of the points in some way
+--	3) ungroup the selected points
+--	reassemble the points (if select all quadunits together, turn [(GridPoint, [QuadUnit])] into [Point], for example)
+--	rewrap in the context of the Map and Schedule
+genericSelect :: Grouper a  ->  ([a] -> [a])  ->  Schedule  ->  Schedule
+genericSelect grpr selector (Schedule d pts) = 
+  let
+    points = M.toList pts			-- :: [(Point, Integer)]
+    groupedPts = (grouper grpr) points		-- :: [a]		-- why doesn't this type signature work?
+    selectedPts = selector groupedPts		-- :: [a1]
+    ungroupedPts = (ungrouper grpr) selectedPts -- :: [(Point, Integer)]
+  in
+    foldl (\s (pt, t) -> addPointTrans s pt t) (Schedule d $ M.fromList []) ungroupedPts
+
+separateTransients :: Grouper Point
+separateTransients = Grouper mygrouper myungrouper
+  where
+    mygrouper = concatMap (\(pt, t) -> L.genericTake t $ repeat pt)
+    myungrouper = map (\pts -> (head pts, L.genericLength pts)) . L.group . L.sort
+
+combinedQuadUnits :: Grouper (GridPoint, [(QuadUnit, Integer)])
+combinedQuadUnits = Grouper g ug
+  where
+    g pts = map morpher $ L.groupBy (F.on (==) (gridPoint . fst)) $ L.sortBy (O.comparing (gridPoint . fst)) pts
+    morpher mpts = (gridPoint $ fst $ head mpts, map (\p -> (quadUnit $ fst p, snd p)) mpts)
+    ug gpts = do
+	(gp, qu_ts) <- gpts
+	(qu, t) <- qu_ts
+	return (Point gp qu, t)
+--    ug gpts = concatMap (\(gp, qu_ts) -> map (\(qu, t) -> (Point gp qu, t)) qu_ts) gpts 	-- can I use the list monad here, to clean things up?
+
+example1 = genericSelect separateTransients (selectRandomly 40 10)
