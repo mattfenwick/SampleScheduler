@@ -29,13 +29,15 @@ realSched = makeSchedule (uniformGrid [(1,8), (1,8)]) justReals
 
 filtered = randomPoints 45 10007 uniformS2d
 
-filtered2 = bestByGridPoint product 10 uniformS2d
+filtered2 = bestByGridPoint 10 product uniformS2d
 
-filtered3 = dimProbsInd (\x -> 1 / (fromInteger x)) 10 realSched
+-- filtered3 = dimProbsInd (\x -> 1 / (fromInteger x)) 10 realSched -- function removed
 
 blur1 = blurred 2 17 realSched
 
 smany = addManySchedules $ take 3 $ repeat filtered
+
+sodd = addManySchedules [filtered, filtered2, blur1, uniformS2d ]
 
 --------------------------------------------------
 

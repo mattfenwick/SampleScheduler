@@ -3,12 +3,7 @@ module Selector (
 	bestByGridPoint,
 	randomPointsAllQuadUnits,
 	bestByGridPointAllQuadUnits,
-	probByGridPoint,
-	dimProbsInd,
-	example1,
-	example2,
-	example3,
-	example4
+	probByGridPoint
 ) where
 
 import Model
@@ -22,82 +17,50 @@ import qualified Data.Function as F
 ------------------------------------------------------------------------------------------------
 
 -- randomly select n points
---	what if the schedule has fewer than n points?           current answer: then all points are selected
---	are transients of a point selected individually?        current answer: no, this selects (Point, transient) pairs as a group
 --	are the Int's in the type signature bad?                current answer: leave them for now, refactor to Integral/Integer if necessary later
---	can points be selected multiple times?			current answer: no 
 randomPoints :: Int -> Int -> Schedule -> Schedule
-randomPoints number seed (Schedule d pts) = Schedule d $ M.fromList filteredPts
-  where
-    filteredPts = selectRandomly number seed (M.toList pts)
+randomPoints n s = genericSelect combTransSepQuad (\_ -> ()) (\_ -> selectRandomly n s)
 
 
 -- select n points, using a weighting function
 --	what if the schedule has fewer than n points?
---	the weighting function only takes the GridPoint into account, not the QuadUnit (nor the transients)
---	transients are not selected individually
 --	the weighting function returns an Integer; would a floating-point number be better?
---	after weighting, the n points with the highest weights are selected -- this is not probabilistic
-bestByGridPoint :: (GridPoint -> Integer) -> Int -> Schedule -> Schedule
-bestByGridPoint f number (Schedule d pts) = Schedule d $ M.fromList filteredPts
-  where
-    filteredPts = selectBest number (f . gridPoint . fst) $ M.toList pts
+bestByGridPoint :: Int -> (GridPoint -> Integer) -> Schedule -> Schedule
+bestByGridPoint n f = genericSelect combTransSepQuad f (selectBest n)
 
 
-dimProbsInd :: (Integer -> Double) -> Int -> Schedule -> Schedule
-dimProbsInd f number (Schedule d pts) = Schedule d $ M.fromList filteredPts
-  where
-    filteredPts = selectBest number (product . map f . gridPoint . fst) $ M.toList pts
+-- should I have to specify 'Int'?  No!!!!
+probByGridPoint :: (Fractional t, R.Random t, Ord t) => Int -> Int -> (GridPoint -> t) -> Schedule -> Schedule
+probByGridPoint n s f = genericSelect combTransSepQuad f (probabilitySelection n s)
 
 
--- type signature is a problem
---	order of parameters  IS VERY BAD -- INCONSISTENT with rest of module
--- 	should I have to specify 'Int'?  No!!!!
-probByGridPoint :: (Fractional t, R.Random t, Ord t) => Int -> ([t] -> t) -> Int -> Schedule -> Schedule
-probByGridPoint seed f number (Schedule d pts) = Schedule d $ M.fromList filteredPts
-  where
-    filteredPts = probabilitySelection number number (\(Point gp _, _) -> f $ map fromIntegral gp) $ M.toList pts
+bestByGridPointAllQuadUnits :: Int -> (GridPoint -> Integer) -> Schedule -> Schedule
+bestByGridPointAllQuadUnits n f = genericSelect combinedQuadUnits f (selectBest n)
 
-------------------------------------------------------------------------------------------------
--- looking at selecting all QuadUnits of a GridPoint together
-
-bestByGridPointAllQuadUnits :: (GridPoint -> Integer) -> Int -> Schedule -> Schedule
-bestByGridPointAllQuadUnits f number (Schedule d pts) = Schedule d pointMap
-  where
-    pointMap = M.fromList $ concat selectedPts  
--- put all the points on an equal footing again, and place them back in a map
-    selectedPts = selectBest number (f . gridPoint . fst . head) groupedPts  
--- select those groups of points based on the function
-    groupedPts = L.groupBy (F.on (==) (gridPoint . fst)) $ M.toList pts  		-- is this a problem because it's not sorted?  or does M.toList sort things?
--- group (Point, transients) together based solely on (gridPoint pt) :: [[(Point, Integer)]]
 
 randomPointsAllQuadUnits :: Int -> Int -> Schedule -> Schedule
-randomPointsAllQuadUnits number seed (Schedule d pts) = Schedule d pointMap
-  where
-    pointMap = M.fromList $ concat filteredPts
-    filteredPts = map fst $ selectBest number snd ratedPoints
-    ratedPoints = zip groupedPts randomNums
-    groupedPts = L.groupBy (F.on (==) (gridPoint . fst)) $ M.toList pts 
-    randomNums = R.randoms (R.mkStdGen seed) :: [Double]
+randomPointsAllQuadUnits n s = genericSelect combinedQuadUnits (\_ -> ()) (\_ -> selectRandomly n s)
 
 ------------------------------------------------------------------------------------------------
+-- selection strategies
 
 -- apply a function to each element, and select the n elements with the best scores
+-- no replacement
+-- what if the input has fewer than n elements?           current answer: then all elements are selected
 selectBest :: (Ord b) => Int -> (a -> b) -> [a] -> [a]
 selectBest num f = take num . reverse . L.sortBy (O.comparing f)
 
 
+-- no replacement
+-- what if the input has fewer than n elements?           current answer: then all elements are selected
 selectRandomly :: Int -> Int -> [a] -> [a]
-selectRandomly number seed things = map fst $ selectBest number snd ratedPoints
+selectRandomly num seed things = map fst $ selectBest num snd ratedPoints
   where
     ratedPoints = zip things randomNums
     randomNums = R.randoms (R.mkStdGen seed) :: [Double]
 
 
 -- perform selection with replacement
--- 	issue with replace:  what should be done with the transients?  		add them? ignore them?
---		current desired answer:  add them
--- what if the schedule has fewer than n points?  	current answer:  then stuff is just selected multiple times (which can happen anyway)
 probabilitySelection :: (Fractional t, R.Random t, Ord t) => Int -> Int -> (a -> t) -> [a] -> [a]
 probabilitySelection num seed f orig = pickedPts
   where
@@ -143,15 +106,6 @@ genericSelect grpr fw selector (Schedule d pts) =
     L.foldl' (\s (pt, t) -> addPointTrans s pt t) (Schedule d $ M.fromList []) ungroupedPts
 
 
--- example1 = genericSelect separateTransients (selectRandomly 40 10)
-example1 = genericSelect separateTransients product (selectBest 25)
--- example2 = genericSelect separateTransients (selectBest 39 (product . gridPoint))
-example2 = genericSelect combinedQuadUnits product (selectBest 15)
--- example2 = genericSelect separateTransients (probabilitySelection 30000 10 ((product :: [Double] -> Double) . map fromIntegral . gridPoint))
-example3 = genericSelect separateTransients ((product :: [Double] -> Double) . map fromIntegral) (probabilitySelection 1025 1700)
-
-example4 = genericSelect comTransSepQuad product (\_ -> selectRandomly 15 8988) -- I believe 'product' is ignored
-
 ----------------------------------------------------------------------------------------------------
 -- groupers
 
@@ -159,6 +113,7 @@ data Grouper a = Grouper { grouper :: ([(Point, Integer)] -> [a]),
 			getGridPoint :: a -> GridPoint,
 			ungrouper :: ([a] -> [(Point, Integer)]) }
 
+-- sepTransSepQuad
 separateTransients :: Grouper Point
 separateTransients = Grouper mygrouper getgp myungrouper
   where
@@ -166,6 +121,7 @@ separateTransients = Grouper mygrouper getgp myungrouper
     getgp = gridPoint
     myungrouper = map (\pts -> (head pts, L.genericLength pts)) . L.group . L.sort
 
+-- combTransCombQuad
 combinedQuadUnits :: Grouper (GridPoint, [(QuadUnit, Integer)])
 combinedQuadUnits = Grouper g gp ug
   where
@@ -177,10 +133,13 @@ combinedQuadUnits = Grouper g gp ug
 	(qu, t) <- qu_ts
 	return (Point gp qu, t)
 
-comTransSepQuad :: Grouper (Point, Integer)
-comTransSepQuad = Grouper (map id) (gridPoint . fst) (map id)
+-- combTransSepQuad
+combTransSepQuad :: Grouper (Point, Integer)				-- combined transients, separate QuadUnits
+combTransSepQuad = Grouper (map id) (gridPoint . fst) (map id)
 
-
+-- sepTransCombQuad :: Grouper (GridPoint, [QuadUnit]) 
+-- I don't think this makes any sense:
+--	what if the original quadunits had different numbers of transients?
 
 
 
