@@ -35,6 +35,8 @@ filtered3 = dimProbsInd (\x -> 1 / (fromInteger x)) 10 realSched
 
 blur1 = blurred 2 17 realSched
 
+smany = addManySchedules $ take 3 $ repeat filtered
+
 --------------------------------------------------
 
 -- selectors here?
