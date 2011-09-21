@@ -6,7 +6,6 @@ module GridPoints (
 ) where
 
 import Model
-import Control.Applicative
 
 
 
@@ -22,7 +21,8 @@ allLowerBounds :: (Integral t) => [(t, t)] -> [[t]]
 allLowerBounds bounds = filter onLowerEdge gridpoints
   where
     gridpoints = uniformGrid bounds
-    onLowerEdge pt = any (\((l, _), c) -> l == c) (zip bounds pt)
+    onLowerEdge pt = any (\((l, _), c) -> l == c) (zip bounds pt)    -- can this be refactored (to use zipWith or as a ZipList?)
+                                                                     --           or maybe use the 'Any' monoid (LYAH Ch 11)
 
 firstPoint :: (Integral t) => [(t, t)] -> [[t]]
 firstPoint bounds = [map fst bounds]

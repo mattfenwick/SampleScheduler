@@ -29,7 +29,7 @@ singleRandom sd pts = fmap (fmap (\r -> quads !! r)) gps_rands		-- pretty ugly (
 --------------------------------------------------
 
 ctxtFreeQuad :: (GridPoint -> [QuadUnit]) -> [GridPoint] -> [(GridPoint, QuadUnit)]
-ctxtFreeQuad qfunc gpoints = concat $ map someFunc gpoints -- someFunc gets a gridpt, and produces a list of tuples
+ctxtFreeQuad qfunc gpoints = concatMap someFunc gpoints -- someFunc takes a gridpt, and produces a list of tuples
   where
     someFunc gp = map ((,) gp) $ qfunc gp
 
