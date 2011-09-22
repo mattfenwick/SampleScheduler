@@ -20,7 +20,7 @@ import qualified GHC.Exts as E
 
 ------------------------------------------------------------------------------------------------
 -- selection strategies
--- selectNBest and selectNRandomly:  no replacement; if input has fewer than num element, all elements are selected
+-- selectNBest and selectNRandomly:  no replacement; if input has fewer than 'num' elements, all elements are selected
 
 -- apply a function to each element, and select the n elements with the best scores
 selectNBest :: (Ord b) => Int -> (a -> b) -> [a] -> [a]
@@ -95,7 +95,6 @@ combTransCombQuad = Grouper g ggp ug
 	(gp, qu_ts) <- gpts
 	(qu, t) <- qu_ts
 	return (Point gp qu, t)
--- t (a, b) f = (f a, b)
 
 combTransSepQuad :: Grouper (Point, Integer)
 combTransSepQuad = Grouper (map id) (gridPoint . fst) (map id)
