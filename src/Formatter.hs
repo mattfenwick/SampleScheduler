@@ -15,6 +15,7 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Text.RJson as R
+import qualified GHC.Exts as E
 --import qualified Data.Ord as O
 
 
@@ -30,26 +31,22 @@ varian (Schedule _ pts) = concat $ L.intersperse "\n" formattedPts
 -- ignore quadrature, transients; print out unique coordinates; one number per line
 -- 1-indexed
 bruker :: Schedule -> String
-bruker (Schedule _ pts) = concat $ L.intersperse "\n" coordinates
+bruker (Schedule _ pts) = concat $ L.intersperse "\n" $ map show coordinates
   where
-    coordinates = concat $ map (map show) uniquePoints 
-    uniquePoints = S.toList $ S.fromList $ map (gridPoint . fst) $ M.toList pts
+    coordinates = concat $ removeDuplicates gridPoints                       -- put all integers in a single list (each integer corresponds to a line)
+    removeDuplicates = S.toList  .  S.fromList                          
+    gridPoints = map (gridPoint . fst) $ M.toList pts                        -- unwrap grid points from Schedule, Map, tuple, Point contexts
 
 
 -- ignore transients; all quadunits of a coordinates in one line
--- this may be the worst code I've ever seen; please PLEASE !!PLEASE!! refactor soon 
--- the comments are bad, too
 -- 1-indexed
 toolkit :: Schedule -> String
-toolkit (Schedule _ pts) = concat $ L.intersperse "\n" formattedLines
+toolkit (Schedule _ pts) = concat $ L.intersperse "\n" $ map someFunc ptlines
   where
-    -- extract points
-    -- group by equality of coordinates
-    -- one line for each group of coordinates
-    formattedLines = fmap (\(gp, qus) -> concat $ L.intersperse " " (sprint gp : (fmap sprint qus)) ) ptlines
-    ptlines = fmap (\(pt:pts) -> (gridPoint pt, fmap quadUnit (pt:pts))) grouped :: [(GridPoint, [QuadUnit])]
-    grouped = L.groupBy compFunc $ fmap fst $ M.toList pts
-    compFunc x y = gridPoint x == gridPoint y
+    someFunc (gp, qus) = concat $ L.intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
+    ptlines = map (\pts -> (gridPoint $ head pts, map quadUnit pts)) grouped          -- turn a group of points into a pair of GridPoint, QuadUnits
+    grouped = E.groupWith gridPoint points                                            -- group points by equality of coordinates
+    points = map fst $ M.toList pts                                                   -- unwrap points from Schedule, Map, tuple contexts
 
 
 -- one coordinates/quadunit per line
@@ -66,10 +63,14 @@ json = show . toJson
 -- one transient per line; like varian format except that points may be repeated (to indicate multiple transients)
 -- 1-indexed
 separateTransients :: Schedule -> String
-separateTransients (Schedule _ pts) = concat $ L.intersperse "\n" transLine
+separateTransients (Schedule _ pts) = concat $ L.intersperse "\n" tLines -- transLine
   where
-    transLine = fmap (\(Point gp qus) -> concat $ L.intersperse " " [sprint gp, sprint qus]) transPoints -- most of the lambda function is stolen from the 'toolkit' function :  so refactor 
-    transPoints = concat [L.genericTake t $ repeat p | (p, t) <- M.toList pts]
+    tLines = do
+      (p, t) <- M.toList pts                                                            -- unwrap points from Schedule, Map context
+      rptPt <- L.genericReplicate t p                                                   -- repeat a point t times (t is the number of transients)
+      return $ formatPoint rptPt                                                     
+    formatPoint (Point gp qus) = concat $ L.intersperse " " [sprint gp, sprint qus]     -- put a space between each coordinate, quadunit
+
 
 -------------------------------------------------
 

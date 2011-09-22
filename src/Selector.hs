@@ -79,7 +79,7 @@ data Grouper a = Grouper { grouper :: ([(Point, Integer)] -> [a]),
 sepTransSepQuad :: Grouper Point
 sepTransSepQuad = Grouper g ggp ug
   where
-    g = concatMap (\(pt, t) -> L.genericTake t $ repeat pt)
+    g = concatMap (\(pt, t) -> L.genericReplicate t pt)
     ggp = gridPoint
     ug = map (\pts -> (head pts, L.genericLength pts)) . L.group . L.sort
 
@@ -106,7 +106,7 @@ combTransSepQuad = Grouper (map id) (gridPoint . fst) (map id)
 --sepTransCombQuad = Grouper g gp ug
 --  where
 --    g pts = map morpher $ L.groupBy (F.on (==) (gridPoint . fst)) $ L.sortBy (O.comparing (gridPoint . fst)) pts
---    morpher mpts = (gridPoint $ fst $ head mpts, map (\(pt, t) -> L.genericTake t $ repeat $ quadUnit pt) mpts)
+--    morpher mpts = (gridPoint $ fst $ head mpts, map (\(pt, t) -> L.genericReplicate t $ quadUnit pt) mpts)
 --    gp = fst
 --    ug gpts = do
 --	(gp, qus) <- gpts
