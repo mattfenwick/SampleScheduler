@@ -5,6 +5,9 @@ import Selector
 import Modifier
 import Formatter
 import ExSelectors
+import qualified Data.Foldable as F
+import qualified Data.Monoid as Md
+import qualified Data.Map as M
 
 
 --------------------------------------------------
@@ -40,12 +43,24 @@ smany = addManySchedules $ take 3 $ repeat filtered
 
 sodd = addManySchedules [filtered, filtered2, blur1, uniformS2d ]
 
+halts = makeSchedule (halton [(1,64), (1,64)] 300) (singleRandom 17)
+
+haltsP = probByGridPoint 1000 4 ((product :: [Double] -> Double) . map fromInteger) halts
+
+haltsG = bestByGridPoint 100 product halts
+
 --------------------------------------------------
 
 -- selectors here?
 
 --------------------------------------------------
+-- miscellaneous functions
 
+totalTime :: Schedule -> Integer
+totalTime = Md.getSum . F.foldMap Md.Sum . points
+
+uniquePoints :: Schedule -> Integer
+uniquePoints = toInteger . M.size . points
 
 --------------------------------------------------
 

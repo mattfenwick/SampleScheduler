@@ -2,7 +2,8 @@ module GridPoints (
 	uniformGrid,
 	allLowerBounds,
 	firstPoint,
-	lastPoint
+	lastPoint,
+	halton
 ) where
 
 import Model
@@ -67,9 +68,12 @@ foldWhile pred comb base things = go base things
       | otherwise = b
 
 
---concentricShell :: (Integral t, Num t1) => [(t,t)] -> t1 -> t1 [[t]]
---concentricShell bounds spacing maxdev = filter close $ uniformGrid bounds
---  where
---    close coord = mydist <= maxdev
---    mydist = abs (ratio - (floor ratio)) * spacing
---   ratio = 
+--concentricShell :: (Integral t, Floating t1) => [(t,t)] -> t1 -> t1 -> [[t]]
+concentricShell bounds spacing maxdev = filter close $ uniformGrid bounds
+  where
+    close point = mydist point <= maxdev                  -- if the point is close to one of the shells (maxdev is a distance)
+    mydist pt = abs (ratio - (fromInteger $ round ratio)) * spacing     -- measuring closeness:  difference between 1) distance from the origin divided by spacing and 2) the nearest integer, multiplied by spacing
+      where
+        ratio = distance / spacing
+        distance = sqrt $ sum $ map ((**2) . fromIntegral) pt
+

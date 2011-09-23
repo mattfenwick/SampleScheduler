@@ -33,7 +33,6 @@ selectNRandomly num seed things = map fst $ selectNBest num snd ratedPoints
     ratedPoints = zip things randomNums
     randomNums = R.randoms (R.mkStdGen seed) :: [Double]
 
-
 -- perform probabilistic selection with replacement
 selectNProb :: (Fractional t, R.Random t, Ord t) => Int -> Int -> (a -> t) -> [a] -> [a]
 selectNProb num seed f orig = pickedPts
@@ -50,19 +49,19 @@ selectNProb num seed f orig = pickedPts
       | r <= 1 = pickPoint rest r                               -- otherwise, continue with the next (sum, point) pair
     pickPoint [] _ = error "expected: 0 <= x <= 1; actual: x > 1" 
     createBins = fmap reverse . L.foldl' (\(sm, bs) w -> (sm + w, (sm + w) : bs)) (0, []) -- this is atrocious and needs to be refactored
-                                                                                          -- what does it do???
-
+                                                                                          -- what does it do???  the 'fmap reverse' is very confusing -- maybe change to:  'reverse . snd'
+                                                                                          -- sm is the current sum, bs is the bins that have bin created, w is the current relative width
 
 ------------------------------------------------------------------------------------------------
 -- general framework for selection, bringing together grouped quadunit selection, selection method (best vs. probability)
 
 -- this type signature is ugly.  can it be refactored?
 genericSelect :: Grouper a  ->  (GridPoint -> b)  ->  (((t, t1) -> t1) -> [(a, b)] -> [(a, b1)])  ->  Schedule  ->  Schedule
-genericSelect grpr fw selector (Schedule d pts) = 
+genericSelect grpr f selector (Schedule d pts) = 
   let
     points = M.toList pts                                                       -- 0) strip off Schedule, Map contexts
     groupedPts = (grouper grpr) points                                          -- 1) group points in some way
-    weightedPts = map (\pt -> (pt, fw $ (getGridPoint grpr) pt)) groupedPts     -- 2) apply weighting function to each
+    weightedPts = map (\pt -> (pt, f $ (getGridPoint grpr) pt)) groupedPts      -- 2) apply weighting function to each
     selectedPts = map fst $ selector snd weightedPts                            -- 3) select some of the points in some way
     ungroupedPts = (ungrouper grpr) selectedPts                                 -- 4) ungroup the selected points
   in
