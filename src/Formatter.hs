@@ -41,9 +41,9 @@ bruker (Schedule _ pts) = concat $ L.intersperse "\n" $ map show coordinates
 -- ignore transients; all quadunits of a coordinates in one line
 -- 1-indexed
 toolkit :: Schedule -> String
-toolkit (Schedule _ pts) = concat $ L.intersperse "\n" $ map someFunc ptlines
+toolkit (Schedule _ pts) = concat $ L.intersperse "\n" $ map lineForm ptlines
   where
-    someFunc (gp, qus) = concat $ L.intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
+    lineForm (gp, qus) = concat $ L.intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
     ptlines = map (\pts -> (gridPoint $ head pts, map quadUnit pts)) grouped          -- turn a group of points into a pair of GridPoint, QuadUnits
     grouped = E.groupWith gridPoint points                                            -- group points by equality of coordinates
     points = map fst $ M.toList pts                                                   -- unwrap points from Schedule, Map, tuple contexts
