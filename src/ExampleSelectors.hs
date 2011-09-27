@@ -1,9 +1,11 @@
-module ExSelectors (
+module ExampleSelectors (
 	randomPoints,
 	bestByGridPoint,
 	randomPointsAllQuadUnits,
 	bestByGridPointAllQuadUnits,
-	probByGridPoint
+	probByGridPoint,
+	nothingBiggerThan,
+	distanceGreaterThan
 ) where
 
 import Model
@@ -38,3 +40,10 @@ bestByGridPointAllQuadUnits n f = genericSelect combTransCombQuad f (selectNBest
 
 randomPointsAllQuadUnits :: Int -> Int -> Schedule -> Schedule
 randomPointsAllQuadUnits n s = genericSelect combTransCombQuad (\_ -> ()) (\_ -> selectNRandomly n s)
+
+
+nothingBiggerThan :: Integer -> Schedule -> Schedule
+nothingBiggerThan n = genericSelect combTransCombQuad (all (<= n)) filter
+
+distanceGreaterThan :: (Floating a, Ord a) => a -> Schedule -> Schedule
+distanceGreaterThan d = genericSelect combTransCombQuad (\gp -> d < sqrt (sum $ map ((** 2) . fromInteger) gp)) filter

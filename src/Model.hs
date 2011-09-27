@@ -59,10 +59,8 @@ addPoint (Schedule opts@(pt:pts)) newpt
 
 --------------------------------------------------
 instance Monoid Schedule where
-  mempty = emptySchedule
+  mempty = Schedule []
   mappend l r = foldl' addPoint l (getPoints r)
-
-emptySchedule = Schedule []
 
 -- create a schedule from a list of points
 newSchedule :: [Point] -> Schedule

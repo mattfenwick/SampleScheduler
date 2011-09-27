@@ -4,7 +4,8 @@ import GridPoints
 import Selector
 import Modifier
 import Formatter
-import ExSelectors
+import ExampleSelectors
+import Grouper
 import qualified Data.Foldable as F
 import qualified Data.Monoid as Md
 import qualified Data.Map as M

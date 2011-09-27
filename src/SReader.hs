@@ -10,35 +10,30 @@ import qualified Data.Map as M
 
 --readJson :: (Monad m) => String -> m Schedule
 readJson text = do
-	d <- dimensions text
 	mpoints <- jpoints text
-	return $ Schedule d (M.fromList mpoints)
+	return $ newSchedule mpoints
 
-
-dimensions :: (Monad m) => R.JsonData -> m Integer
-dimensions (R.JDObject mymap) = do
-	(R.JDNumber n) <- mlookup "numDdimensions" mymap
-	return $ floor n
-dimensions _ = fail "dimensions must be in a json object"
-
-jpoints :: (Monad m) => R.JsonData -> m [(Point, Integer)]
+jpoints :: (Monad m) => R.JsonData -> m [Point]
 jpoints (R.JDObject mymap) = do
 	(R.JDArray jpts) <- mlookup "quadraturePoints" mymap
-	pts <- map jpoint jpts -- I think I'm trying to use the list monad here, and I can't do that
-	return pts
+	return $ doStuff $ map jpoint jpts
 
-jpoint :: (Monad m) => R.JsonData -> m (Point, Integer)
+doStuff :: (Monad m) => [m Point] -> m [Point]
+doStuff pts = do
+  addThing 
+
+jpoint :: (Monad m) => R.JsonData -> m Point
 jpoint (R.JDObject mymap) = do
 	(R.JDArray coords) <- mlookup "gridPoint" mymap
 	(R.JDArray qunit) <- mlookup "quadratureUnit" mymap
-	(R.JDNumber t) <- mlookup "transients" mymap
-	return ((uncurry Point) (csandqs coords qunit), floor t)
+	return $ makePoint (cs coords) (qu qunit)
   where
-    csandqs coords qunit = (map (\(R.JDNumber n) -> floor n) coords, map (\(R.JDString s) -> read s) qunit)
+    cs = map (\(R.JDNumber n) -> floor n)
+    qu = map (\(R.JDString s) -> read s)
 
 mlookup :: (Monad m, Ord k, Show k) => k -> M.Map k a -> m a
 mlookup k m = 
-	let res = M.lookup k m
-	in case res of 
-		(Just r) -> return r
-		Nothing -> fail $ concat ["couldn't find key<", show k, ">"]
+  let res = M.lookup k m
+  in case res of 
+    (Just r) -> return r
+    Nothing -> fail $ concat ["couldn't find key<", show k, ">"]

@@ -48,10 +48,8 @@ toolkit :: Schedule -> String
 toolkit sched = concat $ L.intersperse "\n" $ map lineForm ptlines
   where
     lineForm (gp, qus) = concat $ L.intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
-    ptlines = map (fmap (map fst)) $ (getGrouper combTransCombQuad) $ getPoints sched
---    ptlines = map (\pts -> (gridPoint $ head pts, map quadUnit pts)) grouped          -- turn a group of points into a pair of GridPoint, QuadUnits
---    grouped = E.groupWith gridPoint points                                            -- group points by equality of coordinates
---    points = map fst $ M.toList pts                                                   -- unwrap points from Schedule, Map, tuple contexts
+    ptlines = map (fmap (map fst)) pointTransients                                    -- get rid of the transients, keeping just the GridPoint and the QuadratureUnits
+    pointTransients = (getGrouper combTransCombQuad) $ getPoints sched                -- group the points into [(GridPoint, [(QuadratureUnit, Transients)])]
 
 
 -- one coordinates/quadunit per line
