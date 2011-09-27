@@ -7,6 +7,7 @@ module ExSelectors (
 ) where
 
 import Model
+import Grouper
 import Selector
 import qualified Random as R
 

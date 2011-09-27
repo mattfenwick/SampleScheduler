@@ -8,6 +8,8 @@ import ExSelectors
 import qualified Data.Foldable as F
 import qualified Data.Monoid as Md
 import qualified Data.Map as M
+import qualified Data.List as L
+import qualified Data.Set as S
 
 
 --------------------------------------------------
@@ -23,7 +25,7 @@ uniformS2d = makeSchedule (uniformGrid [(3, 8), (1,5)]) allQuadUnits
 uniformS3d :: Schedule
 uniformS3d = makeSchedule (uniformGrid [(1,2), (3,4), (5,6)]) justReals
 
-crazySched bounds = addManySchedules $ map (flip makeSchedule justReals) [low, fp, lp]
+crazySched bounds = Md.mconcat $ map (flip makeSchedule justReals) [low, fp, lp]
   where
     low = allLowerBounds bounds
     fp = firstPoint bounds
@@ -39,9 +41,9 @@ filtered2 = bestByGridPoint 10 product uniformS2d
 
 blur1 = blurred 2 17 realSched
 
-smany = addManySchedules $ take 3 $ repeat filtered
+smany = Md.mconcat $ take 3 $ repeat filtered
 
-sodd = addManySchedules [filtered, filtered2, blur1, uniformS2d ]
+sodd = Md.mconcat [filtered, filtered2, blur1, uniformS2d ]
 
 halts = makeSchedule (halton [(1,64), (1,64)] 300) (singleRandom 17)
 
@@ -56,11 +58,12 @@ haltsG = bestByGridPoint 100 product halts
 --------------------------------------------------
 -- miscellaneous functions
 
-totalTime :: Schedule -> Integer
-totalTime = Md.getSum . F.foldMap Md.Sum . points
+totalTime :: (Integral t) => Schedule -> t
+totalTime = L.genericLength . getPoints
 
 uniquePoints :: Schedule -> Integer
-uniquePoints = toInteger . M.size . points
+uniquePoints = L.genericLength . removeDuplicates . getPoints
+removeDuplicates = S.toList  .  S.fromList
 
 --------------------------------------------------
 

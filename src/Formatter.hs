@@ -11,6 +11,7 @@ module Formatter (
 
 
 import Model
+import Grouper
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Set as S
@@ -22,31 +23,35 @@ import qualified GHC.Exts as E
 -- ignore the number of transients; one coordinates/quadunit per line
 -- 0-indexed
 varian :: Schedule -> String
-varian (Schedule _ pts) = concat $ L.intersperse "\n" formattedPts
+varian sched = concat $ L.intersperse "\n" formattedPts
   where
-    formattedPts = map (sprint . decrementCoordinates . fst) $ M.toList pts
-    decrementCoordinates (Point gp qus) = Point (map (flip (-) 1) gp) qus
+    formattedPts = map (sprint . decrementCoordinates) $ removeDuplicates $ getPoints sched
+    decrementCoordinates pt = makePoint (map (flip (-) 1) $ gridPoint pt) $ quadUnit pt
 
 
 -- ignore quadrature, transients; print out unique coordinates; one number per line
 -- 1-indexed
 bruker :: Schedule -> String
-bruker (Schedule _ pts) = concat $ L.intersperse "\n" $ map show coordinates
+bruker sched = concat $ L.intersperse "\n" $ map show coordinates
   where
     coordinates = concat $ removeDuplicates gridPoints                       -- put all integers in a single list (each integer corresponds to a line)
-    removeDuplicates = S.toList  .  S.fromList                          
-    gridPoints = map (gridPoint . fst) $ M.toList pts                        -- unwrap grid points from Schedule, Map, tuple, Point contexts
+    gridPoints = map gridPoint $ getPoints sched                                -- unwrap grid points from Schedule, Map, tuple, Point contexts
+
+
+removeDuplicates :: (Ord a) => [a] -> [a]
+removeDuplicates = S.toList  .  S.fromList
 
 
 -- ignore transients; all quadunits of a coordinates in one line
 -- 1-indexed
 toolkit :: Schedule -> String
-toolkit (Schedule _ pts) = concat $ L.intersperse "\n" $ map lineForm ptlines
+toolkit sched = concat $ L.intersperse "\n" $ map lineForm ptlines
   where
     lineForm (gp, qus) = concat $ L.intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
-    ptlines = map (\pts -> (gridPoint $ head pts, map quadUnit pts)) grouped          -- turn a group of points into a pair of GridPoint, QuadUnits
-    grouped = E.groupWith gridPoint points                                            -- group points by equality of coordinates
-    points = map fst $ M.toList pts                                                   -- unwrap points from Schedule, Map, tuple contexts
+    ptlines = map (fmap (map fst)) $ (getGrouper combTransCombQuad) $ getPoints sched
+--    ptlines = map (\pts -> (gridPoint $ head pts, map quadUnit pts)) grouped          -- turn a group of points into a pair of GridPoint, QuadUnits
+--    grouped = E.groupWith gridPoint points                                            -- group points by equality of coordinates
+--    points = map fst $ M.toList pts                                                   -- unwrap points from Schedule, Map, tuple contexts
 
 
 -- one coordinates/quadunit per line
@@ -55,35 +60,31 @@ custom :: Schedule -> String
 custom = sprint
 
 
+-- one transient per line; like varian format except that points may be repeated (to indicate multiple transients)
+-- 1-indexed
+separateTransients :: Schedule -> String
+separateTransients sched = concat $ L.intersperse "\n" tLines -- transLine
+  where
+    tLines = do
+      pt <- L.sort $ getPoints sched                                                            -- unwrap points from Schedule, Map context
+      return $ formatPoint pt                                                     
+    formatPoint pt = concat $ L.intersperse " " [sprint $ gridPoint pt, sprint $ quadUnit pt]     -- put a space between each coordinate, quadunit
+
+
 -- 1-indexed
 json :: Schedule -> String
 json = show . toJson
 
-
--- one transient per line; like varian format except that points may be repeated (to indicate multiple transients)
--- 1-indexed
-separateTransients :: Schedule -> String
-separateTransients (Schedule _ pts) = concat $ L.intersperse "\n" tLines -- transLine
-  where
-    tLines = do
-      (p, t) <- M.toList pts                                                            -- unwrap points from Schedule, Map context
-      rptPt <- L.genericReplicate t p                                                   -- repeat a point t times (t is the number of transients)
-      return $ formatPoint rptPt                                                     
-    formatPoint (Point gp qus) = concat $ L.intersperse " " [sprint gp, sprint qus]     -- put a space between each coordinate, quadunit
-
-
 -------------------------------------------------
 
 toJson :: Schedule -> R.JsonData
-toJson (Schedule d pts) = R.JDObject $ M.fromList [("numDimensions", R.JDNumber $ fromInteger d),
-						   ("quadraturePoints", pointsToJson pts)]
+toJson sched = R.JDObject $ M.fromList [("points", pointsToJson $ getPoints sched)]
   where
-    pointsToJson = R.JDArray . map ptToJson . M.toList
+    pointsToJson = R.JDArray . map ptToJson
 
-ptToJson :: (Point, Integer) -> R.JsonData
-ptToJson ((Point coords quadUnit), t) = R.JDObject $ M.fromList [("transients", R.JDNumber $ fromInteger t),
-								 ("gridPoint", gridPointToJson coords),
-								 ("quadratureUnit", quadUnitToJson quadUnit)]
+ptToJson :: Point -> R.JsonData
+ptToJson pt = R.JDObject $ M.fromList [("gridPoint", gridPointToJson $ gridPoint pt),
+                                       ("quadratureUnit", quadUnitToJson $ quadUnit pt)]
   where
     gridPointToJson = R.JDArray . map (R.JDNumber . fromInteger)
     quadUnitToJson = R.JDArray . map (R.JDString . show)
@@ -103,11 +104,12 @@ instance SchedulePrint QuadUnit where
   sprint = concat . fmap sprint
 
 instance SchedulePrint Point where
-  sprint (Point coords quadUnit) = concat [sprint coords, " ", sprint quadUnit]
+  sprint pt = concat [sprint $ gridPoint pt, " ", sprint $ quadUnit pt]
 
 instance SchedulePrint Schedule where
-  sprint (Schedule _ pts) = foldr comb "" $ M.toList pts
+  sprint sched = foldr comb "" groupedPts
     where
+      groupedPts = (getGrouper combTransSepQuad) $ getPoints sched
       comb (pt, t) base = concat [sprint pt, " ", show t, "\n", base]
 
 
