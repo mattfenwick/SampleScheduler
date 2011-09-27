@@ -18,8 +18,9 @@ module Model (
 ) where
 
 import qualified Data.Map as M
-import Data.List (genericLength, foldl')
+import Data.List (genericLength, foldl', sort)
 import Data.Monoid (mempty, mappend, Monoid)
+import Data.Function (on)
 
 
 --------------------------------------------------
@@ -33,7 +34,13 @@ type QuadUnit = [Quadrature]
 data Point = Point { gridPoint :: GridPoint, 
 			quadUnit :: QuadUnit }  deriving  (Show, Eq, Ord)
 
-data Schedule = Schedule {getPoints :: [Point]}  deriving (Show, Eq)
+data Schedule = Schedule {getPoints :: [Point]}  deriving (Show)
+
+-- a schedule is basically a multi-set of points, so equality doesn't depend on order
+-- however, it's important that none of the client code knows how a schedule is implemented
+instance Eq Schedule where
+  (==) = on (==) (sort . getPoints)         -- is this too fancy????
+--  (Schedule lpts) == (Schedule rpts) = sort rpts == sort lpts
 
 --------------------------------------------------
 

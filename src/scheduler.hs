@@ -6,6 +6,7 @@ import Modifier
 import Formatter
 import ExampleSelectors
 import Grouper
+import SReader
 import qualified Data.Foldable as F
 import qualified Data.Monoid as Md
 import qualified Data.Map as M
