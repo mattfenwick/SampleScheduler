@@ -5,6 +5,7 @@ module SReader (
 
 import Model
 import Control.Applicative
+import Control.Monad.Error () -- for the monad instance of (Either String)
 import qualified Text.RJson as R
 import qualified Data.Map as M
 

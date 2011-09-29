@@ -32,6 +32,7 @@ selectNRandomly num seed things = map fst $ selectNBest num snd ratedPoints
 
 -- perform probabilistic selection with replacement
 selectNProb :: (Fractional t, R.Random t, Ord t) => Int -> Int -> (a -> t) -> [a] -> [a]
+selectNProb _ _ _ [] = []
 selectNProb num seed f orig = pickedPts
   where
     binWidths = map f orig                                      -- determine bin widths from probability distribution function

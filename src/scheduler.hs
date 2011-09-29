@@ -53,6 +53,11 @@ haltsP = probByGridPoint 1000 4 ((product :: [Double] -> Double) . map fromInteg
 
 haltsG = bestByGridPoint 100 product halts
 
+combSched = nothingBiggerThan 8 .
+            randomPoints 50 14957 . 
+            probByGridPoint 1000 100 (((1 /) :: Double -> Double) . product . map fromInteger)
+
+
 --------------------------------------------------
 
 -- selectors here?
