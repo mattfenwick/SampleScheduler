@@ -5,7 +5,8 @@ module ExampleSelectors (
 	bestByGridPointAllQuadUnits,
 	probByGridPoint,
 	nothingBiggerThan,
-	distanceGreaterThan
+	distanceGreaterThan,
+	origSelector
 ) where
 
 import Model
@@ -47,3 +48,6 @@ nothingBiggerThan n = genericSelect combTransCombQuad (all (<= n)) filter
 
 distanceGreaterThan :: (Floating a, Ord a) => a -> Schedule -> Schedule
 distanceGreaterThan d = genericSelect combTransCombQuad (\gp -> d < sqrt (sum $ map ((** 2) . fromInteger) gp)) filter
+
+origSelector :: Int -> Int -> (GridPoint -> Double) -> Schedule -> Schedule
+origSelector n s f = genericSelect combTransCombQuad f (selectWithRandomness n s)

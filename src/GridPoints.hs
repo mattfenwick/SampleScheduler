@@ -12,8 +12,6 @@ import qualified Control.Applicative as A
 import qualified Data.Set as S
 
 
--- randomGrid2d :: (Integer, Integer) -> (Integer, Integer) -> Integer -> [GridPoint]
--- randomGrid2d (xl, xh) (yl, yh) totalpoints = random number generator ...
 
 uniformGrid :: (Enum t) => [(t, t)] -> [[t]]
 uniformGrid bounds = sequence ranges
