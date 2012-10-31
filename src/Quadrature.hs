@@ -1,12 +1,14 @@
 module Quadrature (
-	allQuadUnits,
-	justReals,
-	singleRandom
+
+    allQuadUnits
+  , justReals
+  , singleRandom
+
 )  where
 
 import Model
 import Control.Applicative
-import qualified Random as R
+import qualified System.Random as R
 
 
 

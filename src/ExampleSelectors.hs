@@ -12,7 +12,7 @@ module ExampleSelectors (
 import Model
 import Grouper
 import Selector
-import qualified Random as R
+import qualified System.Random as R
 
 
 

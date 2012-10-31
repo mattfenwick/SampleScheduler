@@ -1,10 +1,12 @@
 module Modifier (
+
 	blurred
+
 ) where
 
 
 import Model
-import qualified Random as R
+import qualified System.Random as R
 
 
 -- 'bump' every point in every dimension a random number of units (from -width to +width)

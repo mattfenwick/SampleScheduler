@@ -9,7 +9,7 @@ module Selector (
 import Model
 import Grouper
 import qualified Data.Map as M
-import qualified Random as R
+import qualified System.Random as R
 import qualified Data.List as L
 import qualified Data.Ord as O
 import qualified GHC.Exts as E
