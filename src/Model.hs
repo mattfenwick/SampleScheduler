@@ -1,46 +1,57 @@
 module Model (
-	Schedule, 
-	getPoints,		
 
-	Quadrature(R, I), 
+    Schedule
+  , getPoints		
 
-	Point, 
-	gridPoint, 
-	quadUnit,
-	QuadUnit,
-	GridPoint,
-	makePoint,
+  , Quadrature(R, I)
 
-	makeSchedule, 
-	newSchedule,
-	addPoints,
+  , Point
+  , gridPoint 
+  , quadUnit
+  , QuadUnit
+  , GridPoint
+  , makePoint
+
+  , makeSchedule 
+  , newSchedule
+  , addPoints
 
 ) where
 
-import qualified Data.Map as M
-import Data.List (genericLength, foldl', sort)
-import Data.Monoid (mempty, mappend, Monoid)
-import Data.Function (on)
+import Data.List          (genericLength, foldl', sort)
+import Data.Monoid        (mempty, mappend, Monoid)
+import Data.Function      (on)
 
 
 --------------------------------------------------
 
-data Quadrature =  R | I  deriving (Show, Eq, Ord, Enum, Bounded, Read)
+data Quadrature  
+      = R 
+      | I  
+  deriving (Show, Eq, Ord, Enum, Bounded, Read)
+
 
 type GridPoint = [Integer]
 
+
 type QuadUnit = [Quadrature]
 
-data Point = Point { gridPoint :: GridPoint, 
-			quadUnit :: QuadUnit }  deriving  (Show, Eq, Ord)
 
-data Schedule = Schedule {getPoints :: [Point]}  deriving (Show)
+data Point = Point { 
+      gridPoint :: GridPoint, 
+	  quadUnit :: QuadUnit 
+  } deriving  (Show, Eq, Ord)
 
--- a schedule is basically a multi-set of points, so equality doesn't depend on order
--- however, it's important that none of the client code knows how a schedule is implemented
+
+data Schedule = Schedule {
+      getPoints :: [Point]
+  } deriving (Show)
+
+-- a schedule is basically a multi-set of points, 
+--   so equality doesn't depend on order
 instance Eq Schedule where
-  (==) = on (==) (sort . getPoints)         -- is this too fancy????
---  (Schedule lpts) == (Schedule rpts) = sort rpts == sort lpts
+  (==) = on (==) (sort . getPoints)        
+
 
 --------------------------------------------------
 
@@ -82,6 +93,3 @@ makeSchedule gps quadgen = newSchedule points
 	where
 		points = map (uncurry makePoint) quad_gps
 		quad_gps = quadgen gps
-
-
-

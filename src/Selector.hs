@@ -1,18 +1,18 @@
 module Selector (
-	genericSelect,
-	selectNBest,
-	selectNRandomly,
-	selectWithRandomness,
-	selectNProb
+
+    genericSelect
+  , selectNBest
+  , selectNRandomly
+  , selectWithRandomness
+  , selectNProb
+
 ) where
 
 import Model
 import Grouper
-import qualified Data.Map as M
-import qualified System.Random as R
-import qualified Data.List as L
-import qualified Data.Ord as O
-import qualified GHC.Exts as E
+import System.Random  (randoms, mkStdGen, Random)
+import Data.List      (sortBy, foldl')
+import Data.Ord       (comparing)
 
 
 
@@ -22,14 +22,14 @@ import qualified GHC.Exts as E
 
 -- apply a function to each element, and select the n elements with the best scores
 selectNBest :: (Ord b) => Int -> (a -> b) -> [a] -> [a]
-selectNBest num f = take num . reverse . L.sortBy (O.comparing f)
+selectNBest num f = take num . reverse . sortBy (comparing f)
 
 
 selectNRandomly :: Int -> Int -> [a] -> [a]
 selectNRandomly num seed things = map fst $ selectNBest num snd ratedPoints
   where
     ratedPoints = zip things randomNums
-    randomNums = R.randoms (R.mkStdGen seed) :: [Double]
+    randomNums = randoms (mkStdGen seed) :: [Double]
 
 
 selectWithRandomness :: Int -> Int -> (a -> Double) -> [a] -> [a]
@@ -37,11 +37,11 @@ selectWithRandomness num seed f things = map fst $ selectNBest num snd randomRat
   where
     randomRatedPoints = map (\(r, (t, w)) -> (t, r * w)) $ zip randomNums ratedPoints
     ratedPoints = map (\t -> (t, f t)) things
-    randomNums = R.randoms (R.mkStdGen seed) :: [Double]
+    randomNums = randoms (mkStdGen seed) :: [Double]
 
 
 -- perform probabilistic selection with replacement
-selectNProb :: (Fractional t, R.Random t, Ord t) => Int -> Int -> (a -> t) -> [a] -> [a]
+selectNProb :: (Fractional t, Random t, Ord t) => Int -> Int -> (a -> t) -> [a] -> [a]
 selectNProb _ _ _ [] = []
 selectNProb num seed f orig = pickedPts
   where
@@ -50,15 +50,15 @@ selectNProb num seed f orig = pickedPts
     (_, bins) = createBins relBinWidths                         -- create a bin for each element
                                                                 --     a bin is an endpoint of an interval (the startpoint is the previous bin)
     binPoints = zip bins orig                                   -- associate an element with each bin
-    randNums = R.randoms $ R.mkStdGen seed -- :: [Double]       -- generate random numbers between 0 and 1
+    randNums = randoms $ mkStdGen seed -- :: [Double]           -- generate random numbers between 0 and 1
     pickedPts = map (pickPoint binPoints) $ take num randNums   -- use 'num' random numbers to pick bins
     pickPoint ((p, pt): rest) r
       | r <= p = pt                                             -- if the random number is less than the sum, pick that point
       | r <= 1 = pickPoint rest r                               -- otherwise, continue with the next (sum, point) pair
-    pickPoint [] _ = error "expected: 0 <= x <= 1; actual: x > 1"                          -- if this ever happens, the programmer committed a mistake!
-    createBins = fmap reverse . L.foldl' (\(sm, bs) w -> (sm + w, (sm + w) : bs)) (0, [])  -- this is atrocious and needs to be refactored
-                                                                                           -- what does it do???  the 'fmap reverse' is very confusing -- maybe change to:  'reverse . snd'
-                                                                                           -- sm is the current sum, bs is the bins that have bin created, w is the current relative width
+    pickPoint [] _ = error "expected: 0 <= x <= 1; actual: x > 1"                        -- if this ever happens, the programmer committed a mistake!
+    createBins = fmap reverse . foldl' (\(sm, bs) w -> (sm + w, (sm + w) : bs)) (0, [])  -- this is atrocious and needs to be refactored
+                                                                                         -- what does it do???  the 'fmap reverse' is very confusing -- maybe change to:  'reverse . snd'
+                                                                                         -- sm is the current sum, bs is the bins that have bin created, w is the current relative width
 
 ------------------------------------------------------------------------------------------------
 -- general framework for selection, bringing together grouped quadunit selection, selection method (best vs. probability)

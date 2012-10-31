@@ -7,16 +7,22 @@ module Quadrature (
 )  where
 
 import Model
-import Control.Applicative
-import qualified System.Random as R
+import Control.Monad             (sequence, liftM2, replicateM)
+import Control.Monad.Instances   ()  -- for Functor instance of ((,) a)
+import System.Random             (randoms, mkStdGen)
 
 
 
+allQuadUnits :: [GridPoint] -> [(GridPoint, QuadUnit)]
+allQuadUnits pts = liftM2 (,) pts (allQuads $ head pts)
 
-allQuadUnits = ctxtFreeQuad allquadunits
 
-justReals = ctxtFreeQuad justreals
+justReals :: [GridPoint] -> [(GridPoint, QuadUnit)]
+justReals pts = liftM2 (,) pts [replicate (length $ head pts) R]
 
+
+allQuads :: GridPoint -> [QuadUnit]
+allQuads pt = replicateM (length pt) [R, I]
 
 --------------------------------------------------
 
@@ -25,23 +31,9 @@ singleRandom :: Int -> [GridPoint] -> [(GridPoint, QuadUnit)]
 singleRandom sd pts = fmap (fmap (\r -> quads !! r)) gps_rands		-- pretty ugly (fmap fmap)
   where
     gps_rands = zip pts randnums		-- pair a gridpoint with a random number
-    randnums = map (flip mod (length quads) . abs) $ R.randoms (R.mkStdGen sd)		-- generate random numbers which can be used as indexes into 'quads'
-    quads = allquadunits (head pts)		-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
+    randnums = map (flip mod (length quads) . abs) $ randoms (mkStdGen sd)		-- generate random numbers which can be used as indexes into 'quads'
+    quads = allQuads (head pts)		-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
 
---------------------------------------------------
-
-ctxtFreeQuad :: (GridPoint -> [QuadUnit]) -> [GridPoint] -> [(GridPoint, QuadUnit)]
-ctxtFreeQuad qfunc gpoints = concatMap someFunc gpoints -- someFunc takes a gridpt, and produces a list of tuples
-  where
-    someFunc gp = map ((,) gp) $ qfunc gp
-
-----------------
-
-allquadunits :: GridPoint -> [QuadUnit]
-allquadunits pt = sequence $ take (length pt) $ repeat [R, I]
-
-justreals :: GridPoint -> [QuadUnit]
-justreals pt = [take (length pt) $ repeat R]
 
 --------------------------------------------------
 -- unused:
