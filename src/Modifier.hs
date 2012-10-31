@@ -6,7 +6,7 @@ module Modifier (
 
 
 import Model
-import qualified System.Random as R
+import System.Random   (randoms, mkStdGen)
 
 
 -- 'bump' every point in every dimension a random number of units (from -width to +width)
@@ -23,14 +23,12 @@ blurred2 width seed sched = newSchedule bumpedPts
     bump (c:cs) bp = (c + bp) : cs
 		-- this should be refactored to modify each of the coordinates with a separate bump function
 		-- this should also check to make sure that ?? none of the points move outside of the allowed area ??
-    randomNums = map (((-) width) . abs . (flip mod (2 * width + 1))) $ R.randoms (R.mkStdGen seed)
+    randomNums = map (((-) width) . abs . (flip mod (2 * width + 1))) $ randoms (mkStdGen seed)
 
 
 blurred :: Integer -> Int -> Schedule -> Schedule
 blurred w s sched = newSchedule bumpedPts
   where
-    bumpedPts = do
-      pt <- zip (getPoints sched) randomNums
-      return $ bump pt
+    bumpedPts = map bump $ zip (getPoints sched) randomNums
     bump (pt, r) = makePoint (map (+r) $ gridPoint pt) (quadUnit pt)
-    randomNums = map (((-) w) . abs . (flip mod (2 * w + 1))) $ R.randoms (R.mkStdGen s)
+    randomNums = map (((-) w) . abs . (flip mod (2 * w + 1))) $ randoms (mkStdGen s)

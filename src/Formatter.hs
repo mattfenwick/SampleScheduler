@@ -15,9 +15,9 @@ module Formatter (
 
 import Model
 import Grouper
-import Data.Map           (fromList)
-import Data.List          (intersperse, sort, nub)
-import Text.RJson         (JsonData(..))
+import Data.Map       (fromList)
+import Data.List      (intersperse, sort, nub)
+import Text.RJson     (JsonData(..))
 
 
 -- ignore the number of transients; one coordinates/quadunit per line
@@ -44,8 +44,8 @@ toolkit :: Schedule -> String
 toolkit sched = concat $ intersperse "\n" $ map lineForm ptlines
   where
     lineForm (gp, qus) = concat $ intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
-    ptlines = map (fmap (map fst)) pointTransients                                    -- get rid of the transients, keeping just the GridPoint and the QuadratureUnits
-    pointTransients = (getGrouper combTransCombQuad) $ getPoints sched                -- group the points into [(GridPoint, [(QuadratureUnit, Transients)])]
+    ptlines = map (fmap (map fst)) pointTransients                                  -- get rid of the transients, keeping just the GridPoint and the QuadratureUnits
+    pointTransients = (getGrouper combTransCombQuad) $ getPoints sched              -- group the points into [(GridPoint, [(QuadratureUnit, Transients)])]
 
 
 -- one coordinates/quadunit per line

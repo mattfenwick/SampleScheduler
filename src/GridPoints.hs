@@ -1,35 +1,36 @@
 module GridPoints (
-	uniformGrid,
-	allLowerBounds,
-	firstPoint,
-	lastPoint,
-	halton
+
+    uniformGrid
+  , allLowerBounds
+  , firstPoint
+  , lastPoint
+  , halton
+    
 ) where
 
 import Model
-import qualified Data.List as L
-import qualified Control.Applicative as A
-import qualified Data.Set as S
+import Data.List            (transpose)
+import Data.Set             (toList, size, insert, empty)
 
 
 
 uniformGrid :: (Enum t) => [(t, t)] -> [[t]]
-uniformGrid bounds = sequence ranges
-  where
-    ranges = map (\(l, h) -> [l .. h]) bounds
+uniformGrid = sequence . map (uncurry enumFromTo)
+    
 
 allLowerBounds :: (Integral t) => [(t, t)] -> [[t]]
-allLowerBounds bounds = filter onLowerEdge gridpoints
+allLowerBounds bounds = filter onLowerEdge (uniformGrid bounds)
   where
-    gridpoints = uniformGrid bounds
-    onLowerEdge pt = any (\((l, _), c) -> l == c) (zip bounds pt)    -- can this be refactored (to use zipWith or as a ZipList?)
-                                                                     --           or maybe use the 'Any' monoid (LYAH Ch 11)
+    onLowerEdge pt = or $ zipWith (==) lows pt
+    lows = map fst bounds
+    
 
 firstPoint :: (Integral t) => [(t, t)] -> [[t]]
-firstPoint bounds = [map fst bounds]
+firstPoint = (:[]) . map fst
+
 
 lastPoint :: (Integral t) => [(t, t)] -> [[t]]
-lastPoint bounds = [map snd bounds]
+lastPoint = (:[]) . map snd
 
 
 -- Int in type signature
@@ -37,15 +38,16 @@ lastPoint bounds = [map snd bounds]
 -- does it hit no more than the maximum, no less than the minimum?  it looks like it, but there should be unit tests
 -- if you tell it to take lots of points, and there aren't that many available .... infinite loop (say, 500 from [(1,5)])
 halton :: (Integral t) => [(t, t)] -> Int -> [[t]]
-halton bounds num = S.toList $ foldWhile (\s -> S.size s < num) S.insert S.empty scaledPoints
+halton bounds num = toList $ foldWhile (\s -> size s < num) insert empty scaledPoints
   where
     scaledPoints = map scalePoint points                                                 -- scale the numbers so they fall between the bounds (inclusive!)
-    scalePoint cs = A.getZipList $ (\sf l c -> (floor $ c * sf) + l) A.<$> A.ZipList scalingFactors A.<*> (A.ZipList $ map fst bounds) A.<*> A.ZipList cs
+    scalePoint cs = zipWith3 (\sf l c -> (floor $ c * sf) + l) scalingFactors (map fst bounds) cs
     scalingFactors = map (\(l, h) -> fromIntegral (h - l + 1)) bounds                    -- is the (+1) correct?  it seems that 'floor' always knocks it down a notch, so ... yes?
     haltonNums = map (\p -> map (haltonNumber p) [0..]) $ take (length bounds) primes    -- associate a prime with each dimension;  generate halton numbers as infinite lists
-    points = L.transpose haltonNums                                                      -- combine the numbers from the dimension lists to form points
+    points = transpose haltonNums                                                      -- combine the numbers from the dimension lists to form points
     primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
-    
+
+
 haltonNumber :: Integer -> Integer -> Double
 haltonNumber b i = go 0 (1 / db) i                   -- b is usually a prime; i is the index into the series
   where
@@ -56,6 +58,7 @@ haltonNumber b i = go 0 (1 / db) i                   -- b is usually a prime; i 
         newr = r + f * (fromInteger $ mod i b)
         newi = floor $ fromInteger i / db
     db = fromInteger b
+
 
 foldWhile :: (b -> Bool) -> (a -> b -> b) -> b -> [a] -> b
 foldWhile pred comb base things = go base things
