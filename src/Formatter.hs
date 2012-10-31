@@ -1,53 +1,49 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 
 module Formatter (
-	varian,
-	bruker,
-	custom,
-	json,
-	toolkit,
-	separateTransients
+
+    varian
+  , bruker
+  , toolkit
+
+  , custom
+  , json
+  , separateTransients
+
 ) where
 
 
 import Model
 import Grouper
-import qualified Data.Map as M
-import qualified Data.List as L
-import qualified Data.Set as S
-import qualified Text.RJson as R
-import qualified GHC.Exts as E
---import qualified Data.Ord as O
+import Data.Map           (fromList)
+import Data.List          (intersperse, sort, nub)
+import Text.RJson         (JsonData(..))
 
 
 -- ignore the number of transients; one coordinates/quadunit per line
 -- 0-indexed
 varian :: Schedule -> String
-varian sched = concat $ L.intersperse "\n" formattedPts
+varian sched = concat $ intersperse "\n" formattedPts
   where
-    formattedPts = map (sprint . decrementCoordinates) $ removeDuplicates $ getPoints sched
+    formattedPts = map (sprint . decrementCoordinates) $ nub $ getPoints sched
     decrementCoordinates pt = makePoint (map (flip (-) 1) $ gridPoint pt) $ quadUnit pt
 
 
 -- ignore quadrature, transients; print out unique coordinates; one number per line
 -- 1-indexed
 bruker :: Schedule -> String
-bruker sched = concat $ L.intersperse "\n" $ map show coordinates
+bruker sched = concat $ intersperse "\n" $ map show coordinates
   where
-    coordinates = concat $ removeDuplicates gridPoints                       -- put all integers in a single list (each integer corresponds to a line)
-    gridPoints = map gridPoint $ getPoints sched                                -- unwrap grid points from Schedule, Map, tuple, Point contexts
-
-
-removeDuplicates :: (Ord a) => [a] -> [a]
-removeDuplicates = S.toList  .  S.fromList
+    coordinates = concat $ nub gridPoints                 -- put all integers in a single list (each integer corresponds to a line)
+    gridPoints = map gridPoint $ getPoints sched          -- unwrap grid points from Schedule, Map, tuple, Point contexts
 
 
 -- ignore transients; all quadunits of a coordinates in one line
 -- 1-indexed
 toolkit :: Schedule -> String
-toolkit sched = concat $ L.intersperse "\n" $ map lineForm ptlines
+toolkit sched = concat $ intersperse "\n" $ map lineForm ptlines
   where
-    lineForm (gp, qus) = concat $ L.intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
+    lineForm (gp, qus) = concat $ intersperse " " (sprint gp : (map sprint qus))    -- put a space between each coordinate, QuadUnit, all together on one line
     ptlines = map (fmap (map fst)) pointTransients                                    -- get rid of the transients, keeping just the GridPoint and the QuadratureUnits
     pointTransients = (getGrouper combTransCombQuad) $ getPoints sched                -- group the points into [(GridPoint, [(QuadratureUnit, Transients)])]
 
@@ -61,12 +57,10 @@ custom = sprint
 -- one transient per line; like varian format except that points may be repeated (to indicate multiple transients)
 -- 1-indexed
 separateTransients :: Schedule -> String
-separateTransients sched = concat $ L.intersperse "\n" tLines -- transLine
+separateTransients sched = concat $ intersperse "\n" tLines
   where
-    tLines = do
-      pt <- L.sort $ getPoints sched                                                            -- unwrap points from Schedule, Map context
-      return $ formatPoint pt                                                     
-    formatPoint pt = concat $ L.intersperse " " [sprint $ gridPoint pt, sprint $ quadUnit pt]     -- put a space between each coordinate, quadunit
+    tLines = map formatPoint $ sort $ getPoints sched            -- unwrap points from Schedule, Map context
+    formatPoint pt = concat $ intersperse " " [sprint $ gridPoint pt, sprint $ quadUnit pt]     -- put a space between each coordinate, quadunit
 
 
 -- 1-indexed
@@ -75,17 +69,17 @@ json = show . toJson
 
 -------------------------------------------------
 
-toJson :: Schedule -> R.JsonData
-toJson sched = R.JDObject $ M.fromList [("points", pointsToJson $ getPoints sched)]
+toJson :: Schedule -> JsonData
+toJson sched = JDObject $ fromList [("points", pointsToJson $ getPoints sched)]
   where
-    pointsToJson = R.JDArray . map ptToJson
+    pointsToJson = JDArray . map ptToJson
 
-ptToJson :: Point -> R.JsonData
-ptToJson pt = R.JDObject $ M.fromList [("gridPoint", gridPointToJson $ gridPoint pt),
-                                       ("quadratureUnit", quadUnitToJson $ quadUnit pt)]
+ptToJson :: Point -> JsonData
+ptToJson pt = JDObject $ fromList [("gridPoint", gridPointToJson $ gridPoint pt),
+                                   ("quadratureUnit", quadUnitToJson $ quadUnit pt)]
   where
-    gridPointToJson = R.JDArray . map (R.JDNumber . fromInteger)
-    quadUnitToJson = R.JDArray . map (R.JDString . show)
+    gridPointToJson = JDArray . map (JDNumber . fromInteger)
+    quadUnitToJson = JDArray . map (JDString . show)
 
 --------------------------------------------------
 
@@ -96,7 +90,7 @@ instance SchedulePrint Quadrature where
   sprint = show
 
 instance SchedulePrint GridPoint where
-  sprint = concat  .  L.intersperse " "  .  fmap show
+  sprint = concat  .  intersperse " "  .  fmap show
 
 instance SchedulePrint QuadUnit where
   sprint = concat . fmap sprint
