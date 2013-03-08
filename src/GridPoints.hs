@@ -4,77 +4,38 @@ module GridPoints (
   , allLowerBounds
   , firstPoint
   , lastPoint
-  , halton
     
 ) where
 
 import Model
-import Data.List            (transpose)
-import Data.Set             (toList, size, insert, empty)
-
 
 
 uniformGrid :: (Enum t) => [(t, t)] -> [[t]]
 uniformGrid = sequence . map (uncurry enumFromTo)
     
 
-allLowerBounds :: (Integral t) => [(t, t)] -> [[t]]
-allLowerBounds bounds = filter onLowerEdge (uniformGrid bounds)
-  where
-    onLowerEdge pt = or $ zipWith (==) lows pt
-    lows = map fst bounds
+-- given two "points", do any of the corresponding "fields" match?
+-- i.e. [1, 2, 4] matches [3, 2, 1], but not [4, 1, 2]
+isAligned :: Eq t => [t] -> [t] -> Bool
+isAligned lows = or . zipWith (==) lows
+
+
+aligned :: Eq t => [t] -> [[t]] -> [[t]]
+aligned = filter . isAligned
+
+
+allLowerBounds :: (Eq t, Enum t) => [(t, t)] -> [[t]]
+allLowerBounds bounds = 
+    let
+       lows = map fst bounds
+    in
+       aligned lows (uniformGrid bounds)
     
 
-firstPoint :: (Integral t) => [(t, t)] -> [[t]]
+firstPoint :: [(t, t)] -> [[t]]
 firstPoint = (:[]) . map fst
 
 
-lastPoint :: (Integral t) => [(t, t)] -> [[t]]
+lastPoint :: [(t, t)] -> [[t]]
 lastPoint = (:[]) . map snd
-
-
--- Int in type signature
--- if there are more than n dimensions in the bounds (n is currently 10 -- the number of primes) -- bad things will happen
--- does it hit no more than the maximum, no less than the minimum?  it looks like it, but there should be unit tests
--- if you tell it to take lots of points, and there aren't that many available .... infinite loop (say, 500 from [(1,5)])
-halton :: (Integral t) => [(t, t)] -> Int -> [[t]]
-halton bounds num = toList $ foldWhile (\s -> size s < num) insert empty scaledPoints
-  where
-    scaledPoints = map scalePoint points                                                 -- scale the numbers so they fall between the bounds (inclusive!)
-    scalePoint cs = zipWith3 (\sf l c -> (floor $ c * sf) + l) scalingFactors (map fst bounds) cs
-    scalingFactors = map (\(l, h) -> fromIntegral (h - l + 1)) bounds                    -- is the (+1) correct?  it seems that 'floor' always knocks it down a notch, so ... yes?
-    haltonNums = map (\p -> map (haltonNumber p) [0..]) $ take (length bounds) primes    -- associate a prime with each dimension;  generate halton numbers as infinite lists
-    points = transpose haltonNums                                                      -- combine the numbers from the dimension lists to form points
-    primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
-
-
-haltonNumber :: Integer -> Integer -> Double
-haltonNumber b i = go 0 (1 / db) i                   -- b is usually a prime; i is the index into the series
-  where
-    go :: Double -> Double -> Integer -> Double
-    go r _ 0 = r                                     -- can it be less than 0?
-    go r f i = go newr (f / db) newi
-      where
-        newr = r + f * (fromInteger $ mod i b)
-        newi = floor $ fromInteger i / db
-    db = fromInteger b
-
-
-foldWhile :: (b -> Bool) -> (a -> b -> b) -> b -> [a] -> b
-foldWhile pred comb base things = go base things
-  where
-    go b [] = b
-    go b (t:ts) 
-      | pred b = go (comb t b) ts
-      | otherwise = b
-
-
---concentricShell :: (Integral t, Floating t1) => [(t,t)] -> t1 -> t1 -> [[t]]
-concentricShell bounds spacing maxdev = filter close $ uniformGrid bounds
-  where
-    close point = mydist point <= maxdev                  -- if the point is close to one of the shells (maxdev is a distance)
-    mydist pt = abs (ratio - (fromInteger $ round ratio)) * spacing     -- measuring closeness:  difference between 1) distance from the origin divided by spacing and 2) the nearest integer, multiplied by spacing
-      where
-        ratio = distance / spacing
-        distance = sqrt $ sum $ map ((**2) . fromIntegral) pt
 

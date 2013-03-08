@@ -8,28 +8,44 @@ module Quadrature (
 
 import Model
 import Control.Monad             (sequence, liftM2, replicateM)
-import Control.Monad.Instances   ()  -- for Functor instance of ((,) a)
 import System.Random             (randoms, mkStdGen)
 
 
 
 allQuadUnits :: [GridPoint] -> [(GridPoint, QuadUnit)]
-allQuadUnits pts = liftM2 (,) pts (allQuads $ head pts)
+allQuadUnits []      =  []
+allQuadUnits (p:ps)  =  liftM2 (,) ps (allQuads $ length p)
 
 
 justReals :: [GridPoint] -> [(GridPoint, QuadUnit)]
-justReals pts = liftM2 (,) pts [replicate (length $ head pts) R]
+justReals []      =  []
+justReals (p:ps)  =
+    let rs = replicate (length p) R
+    in  map (flip (,) rs) ps
 
 
-allQuads :: GridPoint -> [QuadUnit]
-allQuads pt = replicateM (length pt) [R, I]
+allQuads :: Int -> [QuadUnit]
+allQuads = flip replicateM [R, I]
 
 
+-- rolled my own b/c built in transformer-based version too obnoxious to use
+newtype State s a = State {getState :: s -> (s, a)}
 
--- the state needs to be maintained over the various invocations for each point
+instance Monad (State s) where
+  return x = State (\s -> (s, x))
+  State f >>= g = State (\s1 -> let (s2, y) = f s1
+                                in getState (g y) s2)
+
+-- bs should be infinite ...
+getQuad :: [a] -> State [b] ([a], [b])
+getQuad as = State (\bs -> let len = length as 
+                               in (drop len bs, (as, take len bs)))
+
+
+quads :: Int -> [Quadrature]
+quads = map (\x -> case x of False -> R; _ -> I) . randoms . mkStdGen
+
+
 singleRandom :: Int -> [GridPoint] -> [(GridPoint, QuadUnit)]
-singleRandom sd pts = fmap (fmap (\r -> quads !! r)) gps_rands		-- pretty ugly (fmap fmap)
-  where
-    gps_rands = zip pts randnums		-- pair a gridpoint with a random number
-    randnums = map (flip mod (length quads) . abs) $ randoms (mkStdGen sd)		-- generate random numbers which can be used as indexes into 'quads'
-    quads = allQuads (head pts)		-- bad: pulls off first point to get the length, to determine how many quadrature components need to be generated (??REFACTOR??)
+singleRandom seed pts = 
+    snd (getState (sequence $ map getQuad pts) (quads seed))

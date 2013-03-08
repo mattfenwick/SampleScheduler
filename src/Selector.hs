@@ -1,57 +1,52 @@
 module Selector (
 
     genericSelect
-  , selectNBest
-  , selectNRandomly
-  , selectWithRandomness
-  , selectNProb
+  , sortWith
+  , shuffle
+  , sortWithRand
+  , sortWithRandRep
 
 ) where
 
 import Model
 import Grouper
-import System.Random  (randoms, mkStdGen, Random)
+import System.Random  (randoms, mkStdGen)
 import Data.List      (sortBy, foldl')
 import Data.Ord       (comparing)
+import GHC.Exts       (sortWith)
 
 
 
-------------------------------------------------------------------------------------------------
--- selection strategies
--- selectNBest and selectNRandomly:  no replacement; if input has fewer than 'num' elements, all elements are selected
-
--- apply a function to each element, and select the n elements with the best scores
-selectNBest :: (Ord b) => Int -> (a -> b) -> [a] -> [a]
-selectNBest num f = take num . reverse . sortBy (comparing f)
+randomNums :: Int -> [Double]
+randomNums = randoms . mkStdGen
 
 
-selectNRandomly :: Int -> Int -> [a] -> [a]
-selectNRandomly num seed things = map fst $ selectNBest num snd ratedPoints
+sortZip :: Ord b => [b] -> [a] -> [a]
+sortZip bs = map snd . sortBy (comparing fst) . zip bs
+
+
+shuffle :: Int -> [a] -> [a]
+shuffle seed = sortZip (randomNums seed)
+
+
+sortWithRand :: (a -> Double) -> Int -> [a] -> [a]
+sortWithRand f seed xs = sortZip ratedPoints xs
   where
-    ratedPoints = zip things randomNums
-    randomNums = randoms (mkStdGen seed) :: [Double]
-
-
-selectWithRandomness :: Int -> Int -> (a -> Double) -> [a] -> [a]
-selectWithRandomness num seed f things = map fst $ selectNBest num snd randomRatedPoints
-  where
-    randomRatedPoints = map (\(r, (t, w)) -> (t, r * w)) $ zip randomNums ratedPoints
-    ratedPoints = map (\t -> (t, f t)) things
-    randomNums = randoms (mkStdGen seed) :: [Double]
+    ratedPoints = map (\(r, t) -> r * f t) $ zip (randomNums seed) xs
 
 
 -- perform probabilistic selection with replacement
-selectNProb :: (Fractional t, Random t, Ord t) => Int -> Int -> (a -> t) -> [a] -> [a]
-selectNProb _ _ _ [] = []
-selectNProb num seed f orig = pickedPts
+sortWithRandRep :: (a -> Double) -> Int -> [a] -> [a]
+sortWithRandRep _ _ [] = []
+sortWithRandRep f seed orig = pickedPts
   where
     binWidths = map f orig                                      -- determine bin widths from probability distribution function
     relBinWidths = map (\x -> x / (sum binWidths)) binWidths    -- scale bin widths so that sum is 1
     (_, bins) = createBins relBinWidths                         -- create a bin for each element
                                                                 --     a bin is an endpoint of an interval (the startpoint is the previous bin)
     binPoints = zip bins orig                                   -- associate an element with each bin
-    randNums = randoms $ mkStdGen seed -- :: [Double]           -- generate random numbers between 0 and 1
-    pickedPts = map (pickPoint binPoints) $ take num randNums   -- use 'num' random numbers to pick bins
+    randNums = randomNums seed                                  -- generate random numbers between 0 and 1
+    pickedPts = map (pickPoint binPoints) randNums              -- use 'num' random numbers to pick bins
     pickPoint ((p, pt): rest) r
       | r <= p = pt                                             -- if the random number is less than the sum, pick that point
       | r <= 1 = pickPoint rest r                               -- otherwise, continue with the next (sum, point) pair
@@ -74,7 +69,3 @@ genericSelect grpr f selector sched =
     ungroupedPts = (getUngrouper grpr) selectedPts                              -- 4) ungroup the selected points
   in
     newSchedule ungroupedPts                                                    -- 5) rewrap points in the Schedule context
-
-
-
-

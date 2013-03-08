@@ -47,12 +47,6 @@ smany = Md.mconcat $ take 3 $ repeat filtered
 
 sodd = Md.mconcat [filtered, filtered2, blur1, uniformS2d ]
 
-halts = makeSchedule (halton [(1,64), (1,64)] 300) (singleRandom 17)
-
-haltsP = probByGridPoint 1000 4 ((product :: [Double] -> Double) . map fromInteger) halts
-
-haltsG = bestByGridPoint 100 product halts
-
 combSched = nothingBiggerThan 8 .
             randomPoints 50 14957 . 
             probByGridPoint 1000 100 (((1 /) :: Double -> Double) . product . map fromInteger)

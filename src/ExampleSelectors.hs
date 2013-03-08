@@ -33,7 +33,7 @@ bestByGridPoint n f = genericSelect combTransSepQuad f (selectNBest n)
 
 
 -- should I have to specify 'Int'?  No!!!!
-probByGridPoint :: (Fractional t, Random t, Ord t) => Int -> Int -> (GridPoint -> t) -> Schedule -> Schedule
+-- probByGridPoint :: (Fractional t, Random t, Ord t) => Int -> Int -> (GridPoint -> t) -> Schedule -> Schedule
 probByGridPoint n s f = genericSelect combTransSepQuad f (selectNProb n s)
 
 
